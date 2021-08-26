@@ -3,7 +3,7 @@
 int
 main(int argc, char* argv[]) {
     // TODO(alexander): change this with CLI args
-    const str output_directory = str_lit("docs/");
+    const str output_directory = str_lit("generated/");
     const str template_directory = str_lit("templates/");
     const str css_directory = str_lit("css/");
     const str js_directory = str_lit("js/");
