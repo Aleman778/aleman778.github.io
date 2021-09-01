@@ -101,36 +101,119 @@ count(str string) {
     return str_count(string);
 }
 
-// NOTE(alexander): Input/ Output
-str
-read_entire_file(str filepath) {
-    FILE* file;
-    fopen_s(&file, filepath, "rb");
-    if (!file) {
-        printf("File `%s` was not found!", filepath);
-        return str_lit("");
+// NOTE(alexander): io
+str read_entire_file(str filepath);
+bool write_entire_file(str filepath, str contents);
+
+
+// TODO(alexander): implement this later, we use stb_ds for now!
+// NOTE(alexander): dynamic arrays, usage:
+//     i32* array = 0;
+//     arr_push(array, 5);
+
+//struct Array_Header {
+//smm count;
+//smm capacity;
+//};
+
+//#define arr_push(a, x) _arr_push(a, sizeof((a)[0]), )
+//#define arr_count(a) ((Array_Header*) (a) - 1)->count
+//#define arr_capacity(a) ((Array_Header*) (a) - 1)->capacity
+
+//void
+//_arr_alloc(void** array, smm elem_size, smm capacity) {
+//if (*array) {
+//Array_Header* header = (Array_Header*) *array - 1;
+//smm new_capacity = header->capacity*2;
+//
+//} else {
+//Array_Header* header = (Array_Header*) malloc(sizeof(Array_Header) + capacity*elem_size);
+//header->count = 0;
+//header->capacity = capacity;
+//*array = header + 1;
+//}
+//}
+
+//void
+//_arr_push(void* array, smm elem_size, void* data) {
+
+//}
+
+// NOTE(alexander): change the naming convention of stb_ds
+#define arr_push(a, x) arrput(a, x)
+#define arr_pop(a, x) arrpop(a, x)
+#define arr_insert(a, x, p) arrins(a, p, x)
+#define arr_remove(a, p) arrdel(a, p)
+#define arr_set_capacity(a, c) arrsetcap(a, c)
+#define arr_get_capacity(a) arrcap(a)
+
+#define map_put(m, k, v) hmput(m, k, v)
+#define str_map_put(m, k, v) shput(m, k, v)
+#define str_map_get(m, k) shget(m, k)
+
+// NOTE(alexander): hash map
+
+// NOTE(alexander): memory arena
+#ifndef DEFAULT_ALIGNMENT
+#define DEFAULT_ALIGNMENT (2*alignof(smm))
+#endif
+#define ARENA_DEFAULT_BLOCK_SIZE kilobytes(10)
+
+// NOTE(alexander): align has to be a power of two.
+inline umm
+align_forward(umm address, umm align) {
+    assert_power_of_two(align);
+    umm modulo = address & (align - 1);
+    if (modulo != 0) {
+        address += align - modulo;
     }
-    
-    fseek(file, 0, SEEK_END);
-    umm file_size = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    
-    str result = (str) malloc(file_size + 5) + 4;
-    *((u32*) result - 1) = (u32) file_size;
-    fread(result, str_count(result), 1, file);
-    fclose(file);
-    return result;
+    return address;
 }
 
-bool
-write_entire_file(str filepath, str contents) {
-    FILE* file = fopen(filepath, "wb");
-    if (!file) {
-        printf("Failed to open `%s` for writing!", filepath);
-        return false;
-    }
-    fwrite(contents, str_count(contents), 1, file);
-    fclose(file);
-    
-    return true;
+// NOTE(alexander): memory arena
+struct Arena {
+    u8* base;
+    umm size;
+    umm curr_used;
+    umm prev_used;
+    umm min_block_size;
+};
+
+inline void
+arena_initialize(Arena* arena, void* base, umm size) {
+    arena->base = (u8*) base;
+    arena->size = size;
+    arena->curr_used = 0;
+    arena->prev_used = 0;
+    arena->min_block_size = 0;
+}
+
+inline void
+arena_initialize(Arena* arena, umm min_block_size) {
+    arena->base = 0;
+    arena->size = 0;
+    arena->curr_used = 0;
+    arena->prev_used = 0;
+    arena->min_block_size = min_block_size;
+}
+
+void* arena_push_size(Arena* arena, umm size, umm align=DEFAULT_ALIGNMENT, umm flags=0);
+
+inline void
+arena_push_string(Arena* arena, char* string, umm count) {
+    void* ptr = arena_push_size(arena, count, 1);
+    memcpy(ptr, string, count);
+}
+
+#define arena_push_struct(arena, type, flags) (type*) arena_push_size(arena, (umm) sizeof(type), (umm) alignof(type), flags)
+
+inline void
+arena_rewind(Arena* arena) {
+    arena->curr_used = arena->prev_used;
+}
+
+inline void
+arena_clear(Arena* arena) {
+    arena->curr_used = 0;
+    arena->prev_used = 0;
 }
