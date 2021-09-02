@@ -13,8 +13,8 @@ read_entire_file(str filepath) {
     umm file_size = ftell(file);
     fseek(file, 0, SEEK_SET);
     
-    str result = (str) malloc(file_size + 5) + 4;
-    *((u32*) result - 1) = (u32) file_size;
+    
+    str result = str_alloc((u32) file_size);
     fread(result, str_count(result), 1, file);
     fclose(file);
     return result;

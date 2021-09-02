@@ -1,13 +1,10 @@
 version(2);
-project_name = "Website",
+project_name = "Website";
 patterns = {
   "*.c",
   "*.cpp",
   "*.h",
   "*.m",
-  "*.html",
-  "*.css",
-  "*.js",
   "*.bat",
   "*.sh",
   "*.4coder",

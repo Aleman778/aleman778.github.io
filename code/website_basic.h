@@ -200,7 +200,20 @@ arena_initialize(Arena* arena, umm min_block_size) {
 void* arena_push_size(Arena* arena, umm size, umm align=DEFAULT_ALIGNMENT, umm flags=0);
 
 inline void
-arena_push_string(Arena* arena, char* string, umm count) {
+arena_push_str(Arena* arena, char* string, umm count) {
+    void* ptr = arena_push_size(arena, count, 1);
+    memcpy(ptr, string, count);
+}
+
+inline void
+arena_push_str(Arena* arena, str string) {
+    arena_push_str(arena, string, strlen(string));
+}
+
+
+inline void
+arena_push_cstr(Arena* arena, cstr string) {
+    umm count = strlen(string);
     void* ptr = arena_push_size(arena, count, 1);
     memcpy(ptr, string, count);
 }

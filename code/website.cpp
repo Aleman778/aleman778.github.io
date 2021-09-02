@@ -31,6 +31,55 @@ eat_until(char** scanner, char end) {
     return 0;
 }
 
+internal void
+generate_markdown_text(Arena* buffer, char** scanner, bool double_newline=false) {
+    char* curr = *scanner;
+    char* last_push = curr;
+    while (*curr) {
+        if (*curr == '*') {
+            bool bold_font = *(curr + 1) == '*';
+            
+            arena_push_str(buffer, last_push, (u32) (curr - last_push));
+            curr += bold_font ? 2 : 1;
+            last_push = curr;
+            
+            if (bold_font) {
+                arena_push_cstr(buffer, "<b>");
+            } else {
+                arena_push_cstr(buffer, "<i>");
+            }
+            
+            u32 count = eat_until(&curr, '*');
+            arena_push_str(buffer, last_push, count);
+            curr += bold_font ? 1 : 0;
+            last_push = curr;
+            
+            
+            if (bold_font) {
+                arena_push_cstr(buffer, "</b>");
+            } else {
+                arena_push_cstr(buffer, "</i>");
+            }
+        }
+        
+        if (*curr == '\n') {
+            *curr++;
+            if (*curr == '\r') {
+                *curr++;
+            }
+            break;
+        }
+        
+        curr++;
+    }
+    
+    if (last_push != curr) {
+        arena_push_str(buffer, last_push, (u32) (curr - last_push));
+    }
+    
+    *scanner = curr;
+}
+
 int
 main(int argc, char* argv[]) {
     const str output_directory = str_lit("generated/");
@@ -39,22 +88,85 @@ main(int argc, char* argv[]) {
     const str js_directory = str_lit("js/");
     const str docs_directory = str_lit("docs/");
     
-    // NOTE(alexander): read the basic template
-    str template_html_code = read_entire_file(str_concat(template_directory, str_lit("basic.html")));
-    
     struct { cstr key; cstr value; }* template_params = 0;
     str_map_put(template_params, "script_filepath", "script.js");
     str_map_put(template_params, "style_filepath", "style.css");
-    str_map_put(template_params, "body", "Hello World!");
     
-    // TODO(alexander): template processing
-    str generated_html_code;
+    
+    // NOTE(alexander): markdown to html converter
     {
+        str filepath = str_concat(docs_directory, str_lit("hello_world.md"));
+        str markdown = read_entire_file(filepath);
+        
+        str heading_begin = str_lit("<h0>");
+        str heading_end = str_lit("</h0>");
         Arena buffer = {};
         
-        char* curr = template_html_code;
+        char* curr = markdown;
+        while (*curr) {
+            if (*curr == '#') {
+                char h = '0';
+                while (*curr == '#') {
+                    curr++;
+                    h++;
+                }
+                
+                if (*curr == ' ') {
+                    curr++;
+                    if (h <= '6') {
+                        heading_begin[2] = h;
+                        heading_end[3] = h;
+                        arena_push_str(&buffer, heading_begin);
+                        generate_markdown_text(&buffer, &curr);
+                        arena_push_str(&buffer, heading_end);
+                    }
+                    continue;
+                }
+                
+            } else if (*curr == '*' && *(curr + 1) == ' ') {
+                arena_push_cstr(&buffer, "<ul>");
+                
+                do {
+                    *curr += 2;
+                    arena_push_cstr(&buffer, "<li>");
+                    generate_markdown_text(&buffer, &curr);
+                    arena_push_cstr(&buffer, "</li>");
+                } while (*curr == '*' && *(curr + 1) == ' ');
+                
+                arena_push_cstr(&buffer, "</ul>");
+                continue;
+                
+            } else if (*curr >= '1' && *curr <= '9') {
+                curr++;
+                continue;
+            } else if (*curr == '\n' || *curr == '\r') {
+                curr++;
+                continue;
+            }
+            
+            arena_push_cstr(&buffer, "<p>");
+            generate_markdown_text(&buffer, &curr, true);
+            arena_push_cstr(&buffer, "</p>");
+        }
+        
+        str result = str_lit((char*) buffer.base, (u32) buffer.curr_used);
+        printf(markdown);
+        printf(result);
+        str_map_put(template_params, "body", result);
+    }
+    
+    // NOTE(alexander): template processing
+    str generated_html_code;
+    {
+        // NOTE(alexander): read the basic template
+        str filepath = str_concat(template_directory, str_lit("basic.html"));
+        str template_code = read_entire_file(filepath);
+        
+        Arena buffer = {};
+        
+        char* curr = template_code;
         char* last_push = curr;
-        while (*curr != '\0') {
+        while (*curr) {
             char* base = curr;
             // TODO(alexander): handle escape of dollar sign \$ or maybe $$.
             if (*curr == '$') {
@@ -68,11 +180,10 @@ main(int argc, char* argv[]) {
                     char* variable = curr;
                     u32 count = eat_until(&curr, '}');
                     if (count > 0) {
-                        arena_push_string(&buffer, last_push, (u32) (base - last_push));
-                        char* result = (char*) str_map_get(template_params, str_lit(variable, count));
+                        arena_push_str(&buffer, last_push, (u32) (base - last_push));
+                        cstr result = str_map_get(template_params, str_lit(variable, count));
                         if (result) {
-                            printf(result);
-                            arena_push_string(&buffer, result, strlen(result));
+                            arena_push_cstr(&buffer, result);
                         }
                         last_push = curr;
                     }
@@ -82,8 +193,8 @@ main(int argc, char* argv[]) {
             *curr++;
         }
         
-        if (last_push != curr) {
-            arena_push_string(&buffer, last_push, (u32) (curr - last_push));
+        if (last_push != curr - 1) {
+            arena_push_str(&buffer, last_push, (u32) (curr - last_push - 1));
         }
         generated_html_code = str_lit((char*) buffer.base, (u32) buffer.curr_used);
     }
