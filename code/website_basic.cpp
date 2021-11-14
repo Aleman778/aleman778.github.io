@@ -1,12 +1,12 @@
 
 // NOTE(alexander): io
-str
-read_entire_file(str filepath) {
+string
+read_entire_file(string filepath) {
     FILE* file;
     fopen_s(&file, filepath, "rb");
     if (!file) {
         printf("File `%s` was not found!", filepath);
-        return str_lit("");
+        return string_lit("");
     }
     
     fseek(file, 0, SEEK_END);
@@ -14,20 +14,20 @@ read_entire_file(str filepath) {
     fseek(file, 0, SEEK_SET);
     
     
-    str result = str_alloc((u32) file_size);
-    fread(result, str_count(result), 1, file);
+    string result = string_alloc((u32) file_size);
+    fread(result, string_count(result), 1, file);
     fclose(file);
     return result;
 }
 
 bool
-write_entire_file(str filepath, str contents) {
+write_entire_file(string filepath, string contents) {
     FILE* file = fopen(filepath, "wb");
     if (!file) {
         printf("Failed to open `%s` for writing!", filepath);
         return false;
     }
-    fwrite(contents, str_count(contents), 1, file);
+    fwrite(contents, string_count(contents), 1, file);
     fclose(file);
     
     return true;

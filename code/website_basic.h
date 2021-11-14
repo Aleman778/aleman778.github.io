@@ -29,7 +29,7 @@
 
 #if BUILD_DEBUG
 void
-__assert(cstr expression, cstr file, int line) {
+__assert(cstring expression, cstring file, int line) {
     // TODO(alexander): improve assertion printing.
     fprintf(stderr, "%s:%d: Assertion failed: %s\n", file, line, expression);
     *(int *)0 = 0; // NOTE(alexander): purposefully trap the program
@@ -58,52 +58,52 @@ typedef intptr_t     smm;
 typedef float        f32;
 typedef double       f64;
 typedef int32_t      b32;
-typedef char*        str;
-typedef const char*  cstr;
+typedef char*        string;
+typedef const char*  cstring;
 
 // NOTE(alexander): string functions
-#define str_count(s) *((u32*) s - 1)
+#define string_count(s) *((u32*) s - 1)
 
 // TODO(alexander): lazy!!!! don't use malloc for this, put in arena later...
-inline str
-str_alloc(u32 count) {
+inline string
+string_alloc(u32 count) {
     char* result = (char*) malloc(count + 5) + 4;
     result[count] = '\0';
     *((u32*) result - 1) = count;
-    return (str) result;
+    return (string) result;
 }
 
-inline str
-str_lit(str string, u32 count) {
-    str result = str_alloc(count);
-    memcpy(result, string, count);
+inline string
+string_lit(string str, u32 count) {
+    string result = string_alloc(count);
+    memcpy(result, str, count);
     return result;
 }
 
-inline str
-str_lit(cstr string) {
-    u32 count = (u32) strlen(string);
-    return str_lit((str) string, count);
+inline string
+string_lit(cstring str) {
+    u32 count = (u32) strlen(str);
+    return string_lit((string) str, count);
 }
 
-inline str
-str_concat(str a, str b) {
-    u32 a_count = str_count(a);
-    u32 b_count = str_count(b);
-    str result = str_alloc(a_count + b_count);
+inline string
+string_concat(string a, string b) {
+    u32 a_count = string_count(a);
+    u32 b_count = string_count(b);
+    string result = string_alloc(a_count + b_count);
     memcpy(result, a, a_count);
     memcpy(result + a_count, b, b_count);
     return result;
 }
 
 inline u32
-count(str string) {
-    return str_count(string);
+count(string str) {
+    return string_count(str);
 }
 
 // NOTE(alexander): io
-str read_entire_file(str filepath);
-bool write_entire_file(str filepath, str contents);
+string read_entire_file(string filepath);
+bool write_entire_file(string filepath, string contents);
 
 
 // TODO(alexander): implement this later, we use stb_ds for now!
@@ -140,16 +140,16 @@ bool write_entire_file(str filepath, str contents);
 //}
 
 // NOTE(alexander): change the naming convention of stb_ds
-#define arr_push(a, x) arrput(a, x)
-#define arr_pop(a, x) arrpop(a, x)
-#define arr_insert(a, x, p) arrins(a, p, x)
-#define arr_remove(a, p) arrdel(a, p)
-#define arr_set_capacity(a, c) arrsetcap(a, c)
-#define arr_get_capacity(a) arrcap(a)
+#define array_push(a, x) arrput(a, x)
+#define array_pop(a) arrpop(a)
+#define array_insert(a, x, p) arrins(a, p, x)
+#define array_remove(a, p) arrdel(a, p)
+#define array_set_capacity(a, c) arrsetcap(a, c)
+#define array_get_capacity(a) arrcap(a)
 
 #define map_put(m, k, v) hmput(m, k, v)
-#define str_map_put(m, k, v) shput(m, k, v)
-#define str_map_get(m, k) shget(m, k)
+#define string_map_put(m, k, v) shput(m, k, v)
+#define string_map_get(m, k) shget(m, k)
 
 // NOTE(alexander): hash map
 
@@ -200,22 +200,22 @@ arena_initialize(Arena* arena, umm min_block_size) {
 void* arena_push_size(Arena* arena, umm size, umm align=DEFAULT_ALIGNMENT, umm flags=0);
 
 inline void
-arena_push_str(Arena* arena, char* string, umm count) {
+arena_push_string(Arena* arena, char* string, umm count) {
     void* ptr = arena_push_size(arena, count, 1);
     memcpy(ptr, string, count);
 }
 
 inline void
-arena_push_str(Arena* arena, str string) {
-    arena_push_str(arena, string, strlen(string));
+arena_push_string(Arena* arena, string str) {
+    arena_push_string(arena, str, strlen(str));
 }
 
 
 inline void
-arena_push_cstr(Arena* arena, cstr string) {
-    umm count = strlen(string);
+arena_push_cstring(Arena* arena, cstring str) {
+    umm count = strlen(str);
     void* ptr = arena_push_size(arena, count, 1);
-    memcpy(ptr, string, count);
+    memcpy(ptr, str, count);
 }
 
 #define arena_push_struct(arena, type, flags) (type*) arena_push_size(arena, (umm) sizeof(type), (umm) alignof(type), flags)
