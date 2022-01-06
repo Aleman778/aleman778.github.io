@@ -1,17 +1,21 @@
 
 enum Code_Block_Language {
-    
+    CodeBlockLanguage_None,
+    CodeBlockLanguage_C
 };
 
 enum Dom_Node_Type {
-    DomNode_Inline_Text,
-    DomNode_Paragraph,
-    DomNode_Link,
-    DomNode_Date,
-    DomNode_Code_Block,
+    Dom_None,
+    Dom_Inline_Text,
+    Dom_Paragraph,
+    Dom_Heading,
+    Dom_Link,
+    Dom_Date,
+    Dom_Code_Block,
 };
 
-enum Text_Style {
+typedef s32 Text_Style;
+enum {
     TextStyle_None = 0,
     TextStyle_Italics = bit(0),
     TextStyle_Bold = bit(1),
@@ -23,6 +27,7 @@ struct Dom_Node {
     
     string text;
     Text_Style text_style;
+    
     Dom_Node* next;
     s32 depth;
     
@@ -30,6 +35,10 @@ struct Dom_Node {
         struct {
             Dom_Node* first_item;
         } paragraph;
+        
+        struct {
+            s32 level;
+        } heading;
         
         struct {
             Dom_Node* first_item;
@@ -57,5 +66,5 @@ struct Dom_Node {
 
 
 struct Dom {
-    Dom_Node* first;
+    Dom_Node* root;
 };

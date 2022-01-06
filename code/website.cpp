@@ -1,5 +1,8 @@
 #include "website.h"
+
 #include "website_basic.cpp"
+#include "website_tokenizer.cpp"
+#include "website_format_markdown.cpp"
 
 internal bool
 eat_string(u8** scanner, cstring pattern) {
@@ -31,59 +34,8 @@ eat_until(u8** scanner, u8 end) {
     return 0;
 }
 
-internal Dom_Node*
-push_dom_node(Memory_Arena* arena) {
-    return push_struct(arena, Dom_Node);
-}
-
 internal void
 generate_dom_from_markdown_text(Memory_Arena* arena, u8** scanner, bool double_newline=false) {
-    u8* curr = *scanner;
-    u8* last_push = curr;
-    while (*curr) {
-        if (*curr == '*') {
-            bool bold_font = *(curr + 1) == '*';
-            
-            push_string(arena, string_view(last_push, curr));
-            curr += bold_font ? 2 : 1;
-            last_push = curr;
-            
-            if (bold_font) {
-                
-                push_cstring(arena, "<b>");
-            } else {
-                push_cstring(arena, "<i>");
-            }
-            
-            u32 count = eat_until(&curr, '*');
-            push_string(arena, last_push, count);
-            curr += bold_font ? 1 : 0;
-            last_push = curr;
-            
-            
-            if (bold_font) {
-                push_cstring(arena, "</b>");
-            } else {
-                push_cstring(arena, "</i>");
-            }
-        }
-        
-        if (*curr == '\n') {
-            *curr++;
-            if (*curr == '\r') {
-                *curr++;
-            }
-            break;
-        }
-        
-        curr++;
-    }
-    
-    if (last_push != curr) {
-        push_string(arena, string_view(last_push, curr));
-    }
-    
-    *scanner = curr;
 }
 
 int
@@ -104,6 +56,16 @@ main(int argc, char* argv[]) {
         string filepath = string_concat(docs_directory, string_lit("hello_world.md"));
         string markdown = read_entire_file(filepath);
         
+        Tokenizer tokenizer = {};
+        tokenizer_set_source(&tokenizer, markdown);
+        Memory_Arena dom_arena = {};
+        Dom dom = read_markdown(&tokenizer, &dom_arena);
+    }
+#if 0
+    {
+        string filepath = string_concat(docs_directory, string_lit("hello_world.md"));
+        string markdown = read_entire_file(filepath);
+        
         string heading_begin = string_alloc("<h0>");
         string heading_end = string_alloc("</h0>");
         Memory_Arena dom_arena = {};
@@ -114,6 +76,7 @@ main(int argc, char* argv[]) {
         
         u8* curr = markdown.data;
         while (*curr) {
+            
             
             u8* begin_line = curr;
             
@@ -248,6 +211,7 @@ main(int argc, char* argv[]) {
         pln("%\n", f_string(result));
         string_map_put(template_params, "body", result);
     }
+#endif
     
     // NOTE(alexander): template processing
     string generated_html_code;

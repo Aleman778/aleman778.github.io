@@ -5,6 +5,7 @@
 #include "stb_ds.h"
 #include "website_basic.h"
 #include "website_memory.h"
+#include "website_tokenizer.h"
 #include "website_dom.h"
 
 #endif
