@@ -2,9 +2,9 @@
 #include "website_basic.cpp"
 
 internal bool
-eat_string(char** scanner, const char* pattern) {
+eat_string(u8** scanner, cstring pattern) {
     u32 count = 0;
-    char* scan = *scanner;
+    u8* scan = *scanner;
     while (*pattern) {
         count++;
         if (*scan++ != *pattern++) {
@@ -17,9 +17,9 @@ eat_string(char** scanner, const char* pattern) {
 }
 
 internal u32
-eat_until(char** scanner, char end) {
+eat_until(u8** scanner, u8 end) {
     u32 count = 0;
-    char* scan = *scanner;
+    u8* scan = *scanner;
     while (*scan) {
         if (*scan++ == end) {
             *scanner = scan;
@@ -31,34 +31,40 @@ eat_until(char** scanner, char end) {
     return 0;
 }
 
+internal Dom_Node*
+push_dom_node(Memory_Arena* arena) {
+    return push_struct(arena, Dom_Node);
+}
+
 internal void
-generate_markdown_text(Arena* buffer, char** scanner, bool double_newline=false) {
-    char* curr = *scanner;
-    char* last_push = curr;
+generate_dom_from_markdown_text(Memory_Arena* arena, u8** scanner, bool double_newline=false) {
+    u8* curr = *scanner;
+    u8* last_push = curr;
     while (*curr) {
         if (*curr == '*') {
             bool bold_font = *(curr + 1) == '*';
             
-            arena_push_string(buffer, last_push, (u32) (curr - last_push));
+            push_string(arena, string_view(last_push, curr));
             curr += bold_font ? 2 : 1;
             last_push = curr;
             
             if (bold_font) {
-                arena_push_cstring(buffer, "<b>");
+                
+                push_cstring(arena, "<b>");
             } else {
-                arena_push_cstring(buffer, "<i>");
+                push_cstring(arena, "<i>");
             }
             
             u32 count = eat_until(&curr, '*');
-            arena_push_string(buffer, last_push, count);
+            push_string(arena, last_push, count);
             curr += bold_font ? 1 : 0;
             last_push = curr;
             
             
             if (bold_font) {
-                arena_push_cstring(buffer, "</b>");
+                push_cstring(arena, "</b>");
             } else {
-                arena_push_cstring(buffer, "</i>");
+                push_cstring(arena, "</i>");
             }
         }
         
@@ -74,7 +80,7 @@ generate_markdown_text(Arena* buffer, char** scanner, bool double_newline=false)
     }
     
     if (last_push != curr) {
-        arena_push_string(buffer, last_push, (u32) (curr - last_push));
+        push_string(arena, string_view(last_push, curr));
     }
     
     *scanner = curr;
@@ -88,9 +94,9 @@ main(int argc, char* argv[]) {
     const string js_directory = string_lit("js/");
     const string docs_directory = string_lit("docs/");
     
-    struct{ cstring key; cstring value; }* template_params = 0;
-    string_map_put(template_params, "script_filepath", "script.js");
-    string_map_put(template_params, "style_filepath", "style.css");
+    struct{ cstring key; string value; }* template_params = 0;
+    string_map_put(template_params, "script_filepath", string_lit("script.js"));
+    string_map_put(template_params, "style_filepath", string_lit("style.css"));
     
     
     // NOTE(alexander): markdown to html converter
@@ -98,18 +104,18 @@ main(int argc, char* argv[]) {
         string filepath = string_concat(docs_directory, string_lit("hello_world.md"));
         string markdown = read_entire_file(filepath);
         
-        string heading_begin = string_lit("<h0>");
-        string heading_end = string_lit("</h0>");
-        Arena buffer = {};
+        string heading_begin = string_alloc("<h0>");
+        string heading_end = string_alloc("</h0>");
+        Memory_Arena dom_arena = {};
         
         s32 prev_depth = 0;
         
         string* scopes = 0;
         
-        char* curr = markdown;
+        u8* curr = markdown.data;
         while (*curr) {
             
-            char* begin_line = curr;
+            u8* begin_line = curr;
             
             // NOTE(Alexander): handle nested scopes, no tab support
             {
@@ -122,22 +128,22 @@ main(int argc, char* argv[]) {
                     depth++;
                 }
                 
-                string begin_scope = 0;
-                string end_scope = 0;
+                string begin_scope = {};
+                string end_scope = {};
                 
                 bool create_heading = false;
-                char heading_level = '0';
+                u8 heading_level = '0';
                 
                 bool create_list_item = false;
                 
-                string image_alt_text= 0;
-                string image_link = 0;
+                string image_alt_text = {};
+                string image_link = {};
                 bool create_image = false;
                 
                 
                 if (*curr == '#') {
                     
-                    char h = '0';
+                    u8 h = '0';
                     while (*curr == '#') {
                         curr++;
                         h++;
@@ -155,15 +161,15 @@ main(int argc, char* argv[]) {
                 } else if (*curr == '!' && *(curr + 1) == '[') {
                     curr += 2;
                     
-                    char* str = curr;
+                    u8* str = curr;
                     s32 count = eat_until(&curr, ']');
-                    image_alt_text = string_lit(str, count);
+                    image_alt_text = create_string(str, count);
                     
                     if (*curr == '(') {
                         curr++;
                         str = curr;
                         count = eat_until(&curr, ')');
-                        image_link= string_lit(str, count);
+                        image_link= create_string(str, count);
                         create_image = true;
                     }
                     
@@ -188,16 +194,16 @@ main(int argc, char* argv[]) {
                     continue;
                 }
                 
-                while (prev_depth < depth && begin_scope && end_scope) {
+                while (prev_depth < depth && begin_scope.count && end_scope.count) {
                     prev_depth++;
-                    arena_push_string(&buffer, begin_scope);
+                    push_string(&dom_arena, begin_scope);
                     array_push(scopes, end_scope);
                 }
                 
                 while (depth < prev_depth) {
                     prev_depth--;
                     end_scope = array_pop(scopes);
-                    arena_push_string(&buffer, end_scope);
+                    push_string(&dom_arena, end_scope);
                 }
                 
                 if (depth > 0) {
@@ -205,25 +211,25 @@ main(int argc, char* argv[]) {
                 }
                 
                 if (create_heading) {
-                    heading_begin[2] = heading_level;
-                    heading_end[3] = heading_level;
-                    arena_push_string(&buffer, heading_begin);
-                    generate_markdown_text(&buffer, &curr);
-                    arena_push_string(&buffer, heading_end);
+                    heading_begin.data[2] = heading_level;
+                    heading_end.data[3] = heading_level;
+                    push_string(&dom_arena, heading_begin);
+                    generate_dom_from_markdown_text(&dom_arena, &curr);
+                    push_string(&dom_arena, heading_end);
                     continue;
                 } else if (create_list_item) {
-                    arena_push_cstring(&buffer, "<li>");
-                    generate_markdown_text(&buffer, &curr);
-                    arena_push_cstring(&buffer, "</li>");
+                    push_cstring(&dom_arena, "<li>");
+                    generate_dom_from_markdown_text(&dom_arena, &curr);
+                    push_cstring(&dom_arena, "</li>");
                     continue;
                 } else if (create_image) {
-                    arena_push_cstring(&buffer, "<img src=\"");
-                    arena_push_string(&buffer, image_link);
+                    push_cstring(&dom_arena, "<img src=\"");
+                    push_string(&dom_arena, image_link);
                     
-                    arena_push_cstring(&buffer, "\" alt=\"");
-                    arena_push_string(&buffer, image_alt_text);
+                    push_cstring(&dom_arena, "\" alt=\"");
+                    push_string(&dom_arena, image_alt_text);
                     
-                    arena_push_cstring(&buffer, "\">");
+                    push_cstring(&dom_arena, "\">");
                     continue;
                 } else {
                     curr = begin_line;
@@ -231,14 +237,15 @@ main(int argc, char* argv[]) {
                 
             }
             
-            arena_push_cstring(&buffer, "<p>");
-            generate_markdown_text(&buffer, &curr, true);
-            arena_push_cstring(&buffer, "</p>");
+            push_cstring(&dom_arena, "<p>");
+            generate_dom_from_markdown_text(&dom_arena, &curr, true);
+            push_cstring(&dom_arena, "</p>");
         }
         
-        string result = string_lit((char*) buffer.base, (u32) buffer.curr_used);
-        printf(markdown);
-        printf(result);
+        // NOTE(Alexander): might not work if arena is stored on multiple memory blocks
+        string result = create_string((u8*) dom_arena.base, (u32) dom_arena.curr_used);
+        pln("%\n", f_string(markdown));
+        pln("%\n", f_string(result));
         string_map_put(template_params, "body", result);
     }
     
@@ -249,12 +256,12 @@ main(int argc, char* argv[]) {
         string filepath = string_concat(template_directory, string_lit("basic.html"));
         string template_code = read_entire_file(filepath);
         
-        Arena buffer = {};
+        Memory_Arena buffer = {};
         
-        char* curr = template_code;
-        char* last_push = curr;
+        u8* curr = template_code.data;
+        u8* last_push = curr;
         while (*curr) {
-            char* base = curr;
+            u8* base = curr;
             // TODO(alexander): handle escape of dollar sign \$ or maybe $$.
             if (*curr == '$') {
                 if (*(curr + 1) == '$') {
@@ -264,13 +271,13 @@ main(int argc, char* argv[]) {
                 
                 if (*(curr + 1) == '{') {
                     curr += 2;
-                    char* variable = curr;
+                    u8* variable = curr;
                     u32 count = eat_until(&curr, '}');
                     if (count > 0) {
-                        arena_push_string(&buffer, last_push, (u32) (base - last_push));
-                        cstring result = string_map_get(template_params, string_lit(variable, count));
-                        if (result) {
-                            arena_push_cstring(&buffer, result);
+                        push_string(&buffer, last_push, (u32) (base - last_push));
+                        string result = string_map_get(template_params, string_data(string_alloc(variable, count)));
+                        if (result.count) {
+                            push_string(&buffer, result);
                         }
                         last_push = curr;
                     }
@@ -281,9 +288,12 @@ main(int argc, char* argv[]) {
         }
         
         if (last_push != curr - 1) {
-            arena_push_string(&buffer, last_push, (u32) (curr - last_push - 1));
+            push_string(&buffer, last_push, (u32) (curr - last_push - 1));
         }
-        generated_html_code = string_lit((char*) buffer.base, (u32) buffer.curr_used);
+        
+        // NOTE(Alexander): might not work if arena is stored on multiple memory blocks
+        generated_html_code = string_alloc((u8*) buffer.base, (u32) buffer.curr_used);
+        free(buffer.base);
     }
     
     bool success = true;
