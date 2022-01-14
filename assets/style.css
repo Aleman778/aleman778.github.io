@@ -1,5 +1,74 @@
 
-
 * {
-  font-family: Helvetica;
+    font-family: Helvetica;
+}
+
+html {
+    background-color: $0;
+    color: $1
+}
+
+body {
+    margin: 0;
+}
+
+.btn:link {
+  color: $1;
+}
+
+.btn:visited {
+  color: $1;
+}
+
+.btn:hover {
+  color: $1;
+}
+
+.btn:active {
+  color: $1;
+}
+
+.nav {
+    padding: 8px;
+
+    background-color: $4;
+    color: $5;
+}
+
+.nav-container {
+    display: flex;
+    justify-content: center;
+}
+
+.nav-home {
+    font-weight: 700;
+    font-size: 24px;
+    flex-grow: 4;
+}
+
+.nav-link {
+    background-color: transparent;
+    transition: background-color .2s;
+    border-radius: 3px;
+
+    text-decoration: none;
+    padding: 8px;
+    margin: auto 8px;
+}
+
+.nav-link:hover {
+    background-color: rgb(255, 255, 255, 0.2);
+    color: $2;
+}
+
+.nav-link:active {
+    background-color: rgb(255, 255, 255, 0.4);
+    color: $2;
+}
+
+.container {
+    max-width: 640px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 16px
 }

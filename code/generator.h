@@ -50,15 +50,27 @@ read_entire_file(const char* filepath) {
 
 bool
 write_entire_file(const char* filepath, string contents) {
-    FILE* file = fopen(filepath, "wb");
+    FILE* file = fopen(filepath, "wb+");
     if (!file) {
-        printf("Failed to open `%s` for writing!", filepath);
+        printf("Failed to open `%s` for writing!\n", filepath);
         return false;
     }
     fwrite(contents.data, contents.count, 1, file);
     fclose(file);
     
     return true;
+}
+
+// TODO(Alexander): OS probably has a better option 
+bool
+copy_file(const char* src_filepath, const char* dst_filepath) {
+    string contents = read_entire_file(src_filepath);
+    if (!contents.data) {
+        return false;
+    }
+    bool result = write_entire_file(dst_filepath, contents);
+    free(contents.data);
+    return result;
 }
 
 typedef struct {
@@ -895,15 +907,11 @@ template_process_string(string source, int argc, string* args) {
     Token token = next_token(t);
     while (token.symbol) {
         if (token.symbol == '$' && token.text.count == 1) {
-            
-            token = peek_token(t);
-            if (token.symbol == '{' && token.text.count == 1) {
+            int arg_index = peek_token(t).number;
+            if (arg_index >= 0 && arg_index < argc) {
+                string_builder_push(sb, args[arg_index]);
                 next_token(t);
                 token = next_token(t);
-                if (token.number >= 0 && token.number < argc) {
-                    string_builder_push(sb, args[token.number]);
-                    next_token(t);
-                }
             }
         }
         
