@@ -19,32 +19,70 @@
   <!-- <link rel="icon" href="/favicon.svg" type="image/svg+xml"> -->
   <!-- <link rel="apple-touch-icon" href="/apple-touch-icon.png"> -->
 
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="assets/style.css">
+
+  <!-- TODO: for debugging -->
+  <script type="text/javascript" src="https://livejs.com/live.js"></script>
 </head>
 
 <body>
-  <h1>Hello World
-</h1><p>This is a test to see if my markdown parser/ html generator works as expected.
-</p><p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do <b>eiusmod</b> tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. 
-</p><p>This is <i>italic</i> and this is <b>bold</b>.
-</p><h2>Markdown Syntax
-</h2><h3>Unordered List
-</h3><ul><li>Item 1
-</li><li>Item 2
-</li><li>Item 3
-</li><ul><li>Item 3a
-</li><li>Item 3b
-</li></ul></ul><h3>Ordered List
-</h3><ol><li>Item 1
-</li><li>Item 2
-</li><li>Item 2
-</li><ol><li>Item 3a
-</li><li>Item 3b
-</li></ol></ol><h3>Image
-</h3><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/Inadvertent_greeking_in_The_Straits_Times_%2826_April_2014%29%2C_Singapore_-_20140428.jpg/1920px-Inadvertent_greeking_in_The_Straits_Times_%2826_April_2014%29%2C_Singapore_-_20140428.jpg" alt="Image"><h3>Link
-</h3><p>         You can just write the link in plain text https://github.com/Aleman778/aleman778.github.io,
-</p><p>         or use a [custom link](https://github.com/Aleman778/aleman778.github.io)
-</p><p>                                </p>
-  <script src="script.js"></script>
+  <nav class="nav">
+    <div class="nav-container container">
+      <a class="nav-home btn" href="/">Alexander Mennborg</a>
+      
+      <a class="nav-link btn" href="/projects">Projects</a>
+      <a class="nav-link btn" href="/about">About</a>
+      <a class="nav-link btn" href="/blog">Blog</a>
+      <a class="nav-link btn" href="/contact">Contact</a>
+    </div>
+  </nav> 
+  <div class="container">
+    
+<h1>Hello World</h1>
+<p>This is a test to see if my markdown parser/ html generator works as expected.</p>
+<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit,<br>sed do <strong>eiusmod</strong> tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,<br>quis <code>nostrud</code> exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure<br>dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint<br>occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+<p>hello</p>
+<p>test <em>This is italic</em>, <strong>this is bold</strong> and <code>this is code</code>.</p>
+<h2>Markdown Syntax</h2>
+<h3>Unordered List</h3>
+<ul>
+  <li> Item 1</li>
+  <li> Item 2</li>
+  <li> Item 3</li>
+  <ul>
+    <li> Item 3a</li>
+    <li> Item 3b<br>    newline</li></ul></ul>
+<ul>
+  <li> Item 1</li>
+  <li> Item 2</li>
+  <li> Item 3</li>
+  <ul>
+    <li> Item 3a</li>
+    <li> Item 3b<br>    newline</li></ul></ul>
+<ul>
+  <li> Item 1</li>
+  <li> Item 2</li>
+  <li> Item 3</li>
+  <ul>
+    <li> Item 3a</li>
+    <li> Item 3b<br>    newline</li></ul></ul>
+<h3>Ordered List</h3>
+<ol>
+  <li> Item 1</li>
+  <li> Item 2</li>
+  <li> Item 2</li>
+  <ol>
+    <li> Item 3a</li>
+    <li> Item 3b</li></ol>
+  <li> Item 3</li></ol>
+<ol>
+  <li> Item 3</li></ol>
+<h3>Image</h3><img alt="Image" src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/Inadvertent_greeking_in_The_Straits_Times_%2826_April_2014%29%2C_Singapore_-_20140428.jpg/1920px-Inadvertent_greeking_in_The_Straits_Times_%2826_April_2014%29%2C_Singapore_-_20140428.jpg" width="100%"/>
+<h3>Linkä</h3>
+<p>You can just write the link in plain text <a href="https://github.com/Aleman778/aleman778.github.io">https://github.com/Aleman778/aleman778.github.io</a>
+  , <br>or use a <a href="https://github.com/Aleman778/aleman778.github.io">custom link</a>
+  .                                <br></p>
+  </div>
+  <script src="assets/script.js"></script>
 </body>
-</html>
+</html>

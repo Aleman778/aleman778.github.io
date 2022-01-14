@@ -1,0 +1,74 @@
+
+* {
+    font-family: Helvetica;
+}
+
+html {
+    background-color: rgb(30, 31, 32);
+    color: rgb(230, 230, 230)
+}
+
+body {
+    margin: 0;
+}
+
+.btn:link {
+  color: rgb(230, 230, 230);
+}
+
+.btn:visited {
+  color: rgb(230, 230, 230);
+}
+
+.btn:hover {
+  color: rgb(230, 230, 230);
+}
+
+.btn:active {
+  color: rgb(230, 230, 230);
+}
+
+.nav {
+    padding: 8px;
+
+    background-color: rgb(20, 21, 22);
+    color: rgb(230, 230, 230);
+}
+
+.nav-container {
+    display: flex;
+    justify-content: center;
+}
+
+.nav-home {
+    font-weight: 700;
+    font-size: 24px;
+    flex-grow: 4;
+}
+
+.nav-link {
+    background-color: transparent;
+    transition: background-color .2s;
+    border-radius: 3px;
+
+    text-decoration: none;
+    padding: 8px;
+    margin: auto 8px;
+}
+
+.nav-link:hover {
+    background-color: rgb(255, 255, 255, 0.2);
+    color: rgb(74, 150, 217);
+}
+
+.nav-link:active {
+    background-color: rgb(255, 255, 255, 0.4);
+    color: rgb(74, 150, 217);
+}
+
+.container {
+    max-width: 640px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 16px
+}
