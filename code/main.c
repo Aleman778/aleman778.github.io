@@ -33,7 +33,7 @@ string_hash(string str) {
 
 int
 main(int argc, char* argv[]) {
-    char* filename = "pages/hello_world.md";
+    char* filename = "pages/home.md";
     Dom dom = read_markdown_file(filename);
     string html = generate_html_from_dom(&dom);
     //printf("Generated:\n%.*s\n", (int) html.count, html.data);

@@ -7,6 +7,20 @@
 #define array_count(array) (sizeof(array) / sizeof((array)[0]))
 #define zero_struct(s) (memset(&s, 0, sizeof(s)))
 
+#if BUILD_DEBUG
+void
+__assert(const char* expression, const char* file, int line) {
+    // TODO(alexander): improve assertion printing,
+    // maybe let platform layer decide how to present this?
+    fprintf(stderr, "%s:%d: Assertion failed: %s\n", file, line, expression);
+    *(int *)0 = 0; // NOTE(alexander): purposfully trap the program
+}
+
+#define assert(expression) (void)((expression) || (__assert(#expression, __FILE__, __LINE__), 0))
+#else
+#define assert(expression)
+#endif
+
 typedef int bool;
 #define true 1
 #define false 0
@@ -148,6 +162,8 @@ next_token(Tokenizer* t) {
     
     if (t->curr == t->end) {
         result.symbol = 0;
+        result.new_line = true;
+        result.whitespace = true;
         return result;
     }
     
@@ -723,6 +739,10 @@ read_markdown_file(const char* filename) {
     zero_struct(result);
     
     string source = read_entire_file(filename);
+    if (!source.data) {
+        return result;
+    }
+    
     Tokenizer tokenizer;
     zero_struct(tokenizer);
     
@@ -891,6 +911,8 @@ generate_html_from_dom(Dom* dom) {
 
 string
 template_process_string(string source, int argc, string* args) {
+    assert(source.data);
+    
     Tokenizer tokenizer;
     zero_struct(tokenizer);
     
