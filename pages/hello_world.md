@@ -19,20 +19,20 @@ test *This is italic*, **this is bold** and `this is code`.
 * Item 3
   * Item 3a
   * Item 3b
-    newline
+newline
 - Item 1
 - Item 2
 - Item 3
   - Item 3a
   - Item 3b
-    newline
+newline
 
 + Item 1
 + Item 2
 + Item 3
   + Item 3a
   + Item 3b
-    newline
+newline
 
 ### Ordered List
 1. Item 1
@@ -40,12 +40,12 @@ test *This is italic*, **this is bold** and `this is code`.
 3. Item 2
   1. Item 3a
   2. Item 3b
-4. Item 3
-3. Item 3
+4. Item 4
+3. Item 1
 
 ### Image
 ![Image](https://upload.wikimedia.org/wikipedia/commons/thumb/7/70/Inadvertent_greeking_in_The_Straits_Times_%2826_April_2014%29%2C_Singapore_-_20140428.jpg/1920px-Inadvertent_greeking_in_The_Straits_Times_%2826_April_2014%29%2C_Singapore_-_20140428.jpg)
          
-### Linkä
+### Link
 You can just write the link in plain text https://github.com/Aleman778/aleman778.github.io, 
 or use a [custom link](https://github.com/Aleman778/aleman778.github.io).                                

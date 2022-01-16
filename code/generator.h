@@ -258,7 +258,14 @@ typedef enum {
     TextStyle_Code = 1<<2,
 } Text_Style;
 
+// Forward declare
 typedef struct Dom_Node Dom_Node;
+
+typedef struct {
+    Dom_Node* first;
+    Dom_Node* last;
+} Dom_Sequence;
+
 struct Dom_Node {
     Dom_Node_Type type;
     
@@ -270,7 +277,7 @@ struct Dom_Node {
     
     union {
         struct {
-            Dom_Node* first_node;
+            Dom_Sequence seq;
         } paragraph;
         
         struct {
@@ -278,15 +285,15 @@ struct Dom_Node {
         } heading;
         
         struct {
-            Dom_Node* first_item;
+            Dom_Sequence seq;
         } unordered_list;
         
         struct {
-            Dom_Node* first_item;
+            Dom_Sequence seq;
         } ordered_list;
         
         struct {
-            Dom_Node* first_node;
+            Dom_Sequence seq;
         } list_item;
         
         struct {
@@ -467,10 +474,14 @@ is_unordered_list_symbol(char c) {
 }
 
 // NOTE(Alexander): parses a chain of nodes, returns the last node
-Dom_Node*
+Dom_Sequence
 parse_markdown_text_line(Tokenizer* t, Memory_Arena* arena, Token token)  {
-    Dom_Node* result = arena_push_dom_node(arena, 0);
-    Dom_Node* node = result;
+    Dom_Sequence result;
+    
+    result.first = arena_push_dom_node(arena, 0);
+    result.last = result.first;
+    
+    Dom_Node* node = result.first;
     node->type = Dom_Inline_Text;
     node->text.data = token.text.data;
     node->text.count = 0;
@@ -481,37 +492,8 @@ parse_markdown_text_line(Tokenizer* t, Memory_Arena* arena, Token token)  {
         }
         
         if (token.new_line) {
-            token = peek_token(t);
-            
-            if (token.new_line) {
-                break;
-            }
-            
-            {
-                // TODO(Alexander): hackish exceptions avoid merging lines
-                Tokenizer backup = *t;
-                token = next_token(&backup);
-                if (token.whitespace) {
-                    token = next_token(&backup);
-                }
-                if (is_unordered_list_symbol(token.symbol) && peek_token(&backup).whitespace) {
-                    break;
-                }
-                if (token.number > 0 && peek_token(&backup).symbol == '.') {
-                    break;
-                }
-            }
-            
-            // NOTE(Alexander): push line break
-            node = arena_push_dom_node(arena, node);
-            node->type = Dom_Line_Break;
-            
-            // NOTE(Alexander): next node
-            token = next_token(t);
-            node = arena_push_dom_node(arena, node);
-            node->type = Dom_Inline_Text;
-            node->text.data = token.text.data;
-            node->text.count = 0;
+            node->text.count += token.text.count;
+            break;
         }
         
         if (token.symbol == '*' || token.symbol == '`') {
@@ -593,20 +575,23 @@ parse_markdown_text_line(Tokenizer* t, Memory_Arena* arena, Token token)  {
         token = next_token(t);
     }
     
+    result.last = node;
     return result;
 }
 
-Dom_Node*
+Dom_Sequence
 parse_markdown_list(Tokenizer* t, Memory_Arena* arena, Token line_start, int curr_indent) {
-    Dom_Node* result = arena_push_dom_node(arena, 0);
-    Dom_Node* node = result;
+    Dom_Sequence result;
+    result.first = arena_push_dom_node(arena, 0);
+    result.last = result.first;
     
     if (line_start.number > 0 && peek_token(t).symbol == '.') {
         next_token(t);
     }
     
+    Dom_Node* node = result.first;
     node->type = Dom_List_Item;
-    node->list_item.first_node = parse_markdown_text_line(t, arena, next_token(t));
+    node->list_item.seq = parse_markdown_text_line(t, arena, next_token(t));
     
     node = arena_push_dom_node(arena, node);
     
@@ -641,10 +626,10 @@ parse_markdown_list(Tokenizer* t, Memory_Arena* arena, Token line_start, int cur
             
             if (token.number > 0) {
                 node->type = Dom_Ordered_List;
-                node->ordered_list.first_item = parse_markdown_list(t, arena, token, indent);
+                node->ordered_list.seq = parse_markdown_list(t, arena, token, indent);
             } else if (is_unordered_list_symbol(token.symbol)) {
                 node->type = Dom_Unordered_List;
-                node->unordered_list.first_item = parse_markdown_list(t, arena, token, indent);
+                node->unordered_list.seq = parse_markdown_list(t, arena, token, indent);
             }
             
             token = peek_token(t);
@@ -663,20 +648,21 @@ parse_markdown_list(Tokenizer* t, Memory_Arena* arena, Token line_start, int cur
         
         node = arena_push_dom_node(arena, node);
         node->type = Dom_List_Item;
-        node->list_item.first_node = parse_markdown_text_line(t, arena, next_token(t));
+        node->list_item.seq = parse_markdown_text_line(t, arena, next_token(t));
     }
     
+    result.last = node;
     return result;
 }
 
 Dom_Node*
-parse_markdown_line(Tokenizer* t, Memory_Arena* arena) {
-    Dom_Node* node = arena_push_struct(arena, Dom_Node);
+parse_markdown_line(Tokenizer* t, Memory_Arena* arena, Dom_Node* prev_node) {
+    Dom_Node* result = 0;
     
     Token token = next_token(t);
     for (;;) {
         if (!token.symbol) {
-            return node;
+            return result;
         }
         
         if (token.whitespace) {
@@ -693,44 +679,81 @@ parse_markdown_line(Tokenizer* t, Memory_Arena* arena) {
         token = next_token(t);
     }
     
+    // NOTE(Alexander): remove emacs -*- encoding: utf-8 -*- crap
+    if (token.symbol == '-' && peek_token(t).symbol == '*') {
+        Tokenizer temp_t = *t;
+        next_token(&temp_t);
+        Token temp_token = next_token(&temp_t);
+        if (temp_token.symbol == '-') {
+            temp_token = next_token(&temp_t);
+            while (!temp_token.new_line) {
+                temp_token = next_token(&temp_t);
+            }
+            *t = temp_t;
+            token = next_token(t);
+        }
+    }
+    
+    
     if (indent == 0 && token.symbol == '#' && peek_token(t).whitespace) {
+        next_token(t);
         Token begin = next_token(t);
         Token end = begin;
         while (!end.new_line) {
             end = next_token(t);
         }
         
+        Dom_Node* node = arena_push_struct(arena, Dom_Node);
         node->type = Dom_Heading;
-        node->text.data = begin.text.data + begin.text.count;
-        node->text.count = (size_t) (end.text.data - begin.text.data) - end.text.count;
+        node->text.data = begin.text.data;
+        node->text.count = (size_t) (end.text.data - begin.text.data);
         node->heading.level = (int) token.text.count;
+        result = node;
         
     } else if (is_unordered_list_symbol(token.symbol) && peek_token(t).whitespace) {
+        Dom_Node* node = arena_push_struct(arena, Dom_Node);
         node->type = Dom_Unordered_List;
-        node->unordered_list.first_item = parse_markdown_list(t, arena, token, indent);
+        node->unordered_list.seq = parse_markdown_list(t, arena, token, indent);
+        result = node;
         
     } else if (token.number >= 0 && peek_token(t).symbol == '.') {
+        Dom_Node* node = arena_push_struct(arena, Dom_Node);
         node->type = Dom_Ordered_List;
-        node->ordered_list.first_item = parse_markdown_list(t, arena, token, indent);
+        node->ordered_list.seq = parse_markdown_list(t, arena, token, indent);
+        result = node;
         
     } else if (token.symbol == '`' && token.text.count == 3) {
+        Dom_Node* node = arena_push_struct(arena, Dom_Node);
         node->type = Dom_Code_Block;
+        result = node;
         
     } else if (token.symbol == '!' && peek_token(t).symbol == '[') {
         string alt = parse_enclosed_string(t, '[', ']');
         string src = parse_enclosed_string(t, '(', ')');
         
         if (src.count > 0 && alt.count > 0) {
+            Dom_Node* node = arena_push_struct(arena, Dom_Node);
             node->type = Dom_Image;
             node->image.source = src;
             node->text = alt;
+            result = node;
         }
     } else {
-        node->type = Dom_Paragraph;
-        node->paragraph.first_node = parse_markdown_text_line(t, arena, token);
+        if (!token.new_line && prev_node->type == Dom_Paragraph) {
+            // Join the two sequence of nodes into single paragraph node
+            Dom_Sequence next_seq = parse_markdown_text_line(t, arena, token);
+            result = prev_node;
+            result->paragraph.seq.last->next = next_seq.first;
+            result->paragraph.seq.last = next_seq.last;
+        } else {
+            Dom_Node* node = arena_push_struct(arena, Dom_Node);
+            node->type = Dom_Paragraph;
+            node->paragraph.seq = parse_markdown_text_line(t, arena, token);
+            result = node;
+        }
     }
     
-    return node;
+    return result;
 }
 
 Dom
@@ -751,21 +774,21 @@ read_markdown_file(const char* filename) {
     t->curr = t->base;
     t->end = t->curr + source.count;
     
-    // Allocate memory block to store the DOM in
-    
     Memory_Arena dom_arena;
     zero_struct(dom_arena);
     
     result.root = arena_push_struct(&dom_arena, Dom_Node);
     Dom_Node* curr_node = result.root;
     while (true) {
-        Dom_Node* next_node = parse_markdown_line(t, &dom_arena);
-        if (next_node->type == Dom_None) {
+        Dom_Node* next_node = parse_markdown_line(t, &dom_arena, curr_node);
+        if (!next_node || next_node->type == Dom_None) {
             break;
         }
         
-        curr_node->next = next_node;
-        curr_node = next_node;
+        if (next_node != curr_node) {
+            curr_node->next = next_node;
+            curr_node = next_node;
+        }
     }
     
     
@@ -793,28 +816,28 @@ push_generated_html_from_dom_node(Memory_Arena* arena, Dom_Node* node, int depth
             case Dom_Paragraph: {
                 arena_push_new_line(arena, depth);
                 arena_push_cstring(arena, "<p>");
-                push_generated_html_from_dom_node(arena, node->paragraph.first_node, depth + 2);
+                push_generated_html_from_dom_node(arena, node->paragraph.seq.first, depth + 2);
                 arena_push_cstring(arena, "</p>");
             } break;
             
             case Dom_Unordered_List: {
                 arena_push_new_line(arena, depth);
                 arena_push_cstring(arena, "<ul>");
-                push_generated_html_from_dom_node(arena, node->unordered_list.first_item, depth + 2);
+                push_generated_html_from_dom_node(arena, node->unordered_list.seq.first, depth + 2);
                 arena_push_cstring(arena, "</ul>");
             } break;
             
             case Dom_Ordered_List: {
                 arena_push_new_line(arena, depth);
                 arena_push_cstring(arena, "<ol>");
-                push_generated_html_from_dom_node(arena, node->unordered_list.first_item, depth + 2);
+                push_generated_html_from_dom_node(arena, node->unordered_list.seq.first, depth + 2);
                 arena_push_cstring(arena, "</ol>");
             } break;
             
             case Dom_List_Item: {
                 arena_push_new_line(arena, depth);
                 arena_push_cstring(arena, "<li>");
-                push_generated_html_from_dom_node(arena, node->list_item.first_node, depth + 2);
+                push_generated_html_from_dom_node(arena, node->list_item.seq.first, depth + 2);
                 arena_push_cstring(arena, "</li>");
             } break;
             

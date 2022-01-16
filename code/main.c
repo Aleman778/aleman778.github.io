@@ -59,7 +59,7 @@ main(int argc, char* argv[]) {
     }
     
     copy_file("assets/script.js", "generated/assets/script.js");
-    
+    copy_file("assets/avatar.jpg", "generated/assets/avatar.jpg");
     
     Template_Parameters params;
     params.stylesheet_path = string_lit("assets/style.css");
