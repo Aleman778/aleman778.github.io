@@ -12,6 +12,28 @@ body {
     margin: 0;
 }
 
+.container {
+    margin: 16px;
+}
+
+.content-container {
+    max-width: 720px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+.row {
+  display: flex;
+  flex-flow: row wrap;
+  justify-content: center;
+  flex-direction: row;
+}
+
+.column {
+  flex: 1 1 0px;
+  padding: 8px;
+}
+
 .btn:link {
   color: rgb(230, 230, 230);
 }
@@ -30,34 +52,58 @@ body {
 
 .nav {
     padding: 8px;
-
     background-color: rgb(20, 21, 22);
     color: rgb(230, 230, 230);
 }
 
 .nav-container {
     display: flex;
+    flex-flow: row wrap;
     justify-content: center;
 }
 
 .nav-home {
     font-weight: 700;
     font-size: 24px;
-    flex-grow: 4;
+    flex-grow: 1;
+}
+
+.nav-link-group {
+    margin: auto;
+    margin-top: 16px;
+}
+
+@media only screen and (max-width: 380px) {
+    .nav-home {
+        text-align: center;
+    }
+
+    .nav-link-group {
+        margin-top: 16px;
+    }
+    
+    .nav-link {
+        text-align: center;
+    }
+
+    .hero {
+        margin-left: -16px !important;
+        margin-right: -16px !important;
+    }
 }
 
 .nav-link {
     background-color: transparent;
-    transition: background-color .2s;
+    transition: color .2s;
     border-radius: 3px;
 
+    font-weight: 700;
     text-decoration: none;
     padding: 8px;
     margin: auto 8px;
 }
 
 .nav-link:hover {
-    background-color: rgb(255, 255, 255, 0.2);
     color: rgb(74, 150, 217);
 }
 
@@ -66,9 +112,26 @@ body {
     color: rgb(74, 150, 217);
 }
 
-.container {
-    max-width: 640px;
-    width: 100%;
+.hero {
+    font-size: 18px;
+    background-color: rgb(20, 21, 22);
+    border-radius: 4px;
+    padding: 32px;
+    max-width: 480px;
     margin: 0 auto;
-    padding: 16px
+    margin-bottom: 128px;
+}
+
+.hero-visual {
+    width: 128px;
+    margin: 48px auto;
+}
+
+.hero-visual > img {
+    border-radius: 50%;
+}
+
+.hero-heading {
+    font-size: 48px;   
+    font-weight: 900;
 }
