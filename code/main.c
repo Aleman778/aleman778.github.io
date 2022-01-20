@@ -18,18 +18,6 @@ typedef struct {
     string content;
 } Template_Parameters;
 
-size_t
-string_hash(string str) {
-    size_t hash = 5381;
-    
-    for (int i = 0; i < str.count; i++) {
-        hash = (hash * 33) ^ (size_t) str.data[i];
-    }
-    
-    return hash;
-}
-
-
 
 int
 main(int argc, char* argv[]) {

@@ -3,6 +3,7 @@
 
 #include "stdio.h"
 #include "stdlib.h"
+#include "stdint.h"
 
 #define array_count(array) (sizeof(array) / sizeof((array)[0]))
 #define zero_struct(s) (memset(&s, 0, sizeof(s)))
@@ -21,9 +22,25 @@ __assert(const char* expression, const char* file, int line) {
 #define assert(expression)
 #endif
 
-typedef int bool;
+// NOTE(Alexander): define more convinient types
 #define true 1
 #define false 0
+typedef int          bool;
+typedef unsigned int uint;
+typedef int8_t       s8;
+typedef uint8_t      u8;
+typedef int16_t      s16;
+typedef uint16_t     u16;
+typedef int32_t      s32;
+typedef uint32_t     u32;
+typedef int64_t      s64;
+typedef uint64_t     u64;
+typedef uintptr_t    umm;
+typedef intptr_t     smm;
+typedef float        f32;
+typedef double       f64;
+typedef int32_t      b32;
+typedef const char*  cstring;
 
 typedef struct {
     char* data;
@@ -31,15 +48,120 @@ typedef struct {
 } string;
 
 inline string
-string_lit(const char* lit) {
+string_lit(cstring lit) {
     string result;
     result.data = (char*) lit;
     result.count = strlen(lit);
     return result;
 }
 
+// NOTE(Alexander): allocates a new cstring that is null terminated
+inline cstring
+string_to_cstring(string str) {
+    char* result = (char*) malloc(str.count + 1);
+    memcpy(result, str.data, str.count);
+    result[str.count] = 0;
+    return (cstring) result;
+}
+
+u64
+string_hash(string str) {
+    u64 hash = 5381;
+    for (u64 i = 0; i < str.count; i++) {
+        hash = (hash * 33) ^ (size_t) str.data[i];
+    }
+    return hash;
+}
+
+int
+string_compare(string a, string b) {
+    if (a.count == b.count) {
+        for (umm i = 0; i < a.count; i++) {
+            if (a.data[i] != b.data[i]) {
+                return a.data[i] - b.data[i];
+            }
+        }
+    } else if (a.count > b.count) {
+        return a.data[a.count - 1];
+    } else {
+        return '\0' - b.data[b.count - 1];
+    }
+    
+    return 0;
+}
+
+inline int
+string_equals(string a, string b) {
+    return string_compare(a, b) == 0;
+}
+
+typedef struct {
+    char* data;
+    umm size;
+    umm curr_used;
+} String_Builder;
+
+inline void
+string_builder_free(String_Builder* sb) {
+    free(sb->data);
+    sb->data = 0;
+    sb->curr_used = 0;
+    sb->size = 0;
+}
+
+inline void
+string_builder_alloc(String_Builder* sb, umm new_size) {
+    void* new_data = realloc(sb->data, new_size);
+    if (!new_data) {
+        free(sb->data);
+        sb->data = (char*) malloc(new_size);
+    }
+    sb->data = (char*) new_data;
+    sb->size = new_size;
+}
+
+inline void
+string_builder_ensure_capacity(String_Builder* sb, umm capacity) {
+    umm min_size = sb->curr_used + capacity;
+    if (min_size > sb->size) {
+        umm new_size = max(sb->size * 2, min_size);
+        string_builder_alloc(sb, new_size);
+    }
+}
+
+void
+string_builder_push_string(String_Builder* sb, string str) {
+    string_builder_ensure_capacity(sb, str.count);
+    
+    memcpy(sb->data + sb->curr_used, str.data, str.count);
+    sb->curr_used += str.count;
+}
+
+void
+string_builder_push_cstring(String_Builder* sb, cstring str) {
+    string_builder_push_string(sb, string_lit(str));
+}
+
 string
-read_entire_file(const char* filepath) {
+string_builder_to_string(String_Builder* sb) {
+    string result;
+    result.data = (char*) malloc(sb->curr_used + 1);
+    result.count = sb->curr_used;
+    memcpy(result.data, sb->data, sb->curr_used);
+    result.data[result.count] = 0;
+    return result;
+}
+
+string
+string_builder_to_string_nocopy(String_Builder* sb) {
+    string result;
+    result.data = sb->data;
+    result.count = sb->curr_used;
+    return result;
+}
+
+string
+read_entire_file(cstring filepath) {
     string result;
     zero_struct(result);
     
@@ -51,7 +173,7 @@ read_entire_file(const char* filepath) {
     }
     
     fseek(file, 0, SEEK_END);
-    size_t file_size = ftell(file);
+    umm file_size = ftell(file);
     fseek(file, 0, SEEK_SET);
     
     
@@ -63,7 +185,7 @@ read_entire_file(const char* filepath) {
 }
 
 bool
-write_entire_file(const char* filepath, string contents) {
+write_entire_file(cstring filepath, string contents) {
     FILE* file = fopen(filepath, "wb+");
     if (!file) {
         printf("Failed to open `%s` for writing!\n", filepath);
@@ -77,7 +199,7 @@ write_entire_file(const char* filepath, string contents) {
 
 // TODO(Alexander): OS probably has a better option 
 bool
-copy_file(const char* src_filepath, const char* dst_filepath) {
+copy_file(cstring src_filepath, cstring dst_filepath) {
     string contents = read_entire_file(src_filepath);
     if (!contents.data) {
         return false;
@@ -127,8 +249,10 @@ is_special_character(char c) {
     return c == '*'
         || c == '#'
         || c == '$'
+        || c == '@'
         || c == ':'
         || c == '/'
+        || c == '"'
         || c == '`'
         || c == '.'
         || c == ','
@@ -238,6 +362,7 @@ typedef enum {
 
 typedef enum {
     Dom_None,
+    Dom_Root,
     Dom_Line_Break,
     Dom_Inline_Text,
     Dom_Paragraph,
@@ -317,54 +442,8 @@ struct Dom_Node {
 };
 
 typedef struct {
-    Dom_Node* root;
+    Dom_Sequence seq;
 } Dom;
-
-typedef struct {
-    char* data;
-    size_t size;
-    size_t curr_used;
-} String_Builder;
-
-inline void
-string_builder_alloc(String_Builder* builder, size_t new_size) {
-    void* new_data = realloc(builder->data, new_size);
-    if (!new_data) {
-        printf("TODO: handle when we can't realloc\n");
-    }
-    builder->data = new_data;
-    builder->size = new_size;
-}
-
-void
-string_builder_push(String_Builder* builder, string str) {
-    size_t required_size = str.count + builder->curr_used;
-    if (required_size > builder->size) {
-        size_t new_size = max(builder->size * 2, required_size);
-        string_builder_alloc(builder, new_size);
-    }
-    
-    memcpy(builder->data + builder->curr_used, str.data, str.count);
-    builder->curr_used += str.count;
-}
-
-string
-string_builder_to_string(String_Builder* builder) {
-    string result;
-    result.data = malloc(builder->curr_used + 1);
-    result.count = builder->curr_used;
-    memcpy(result.data, builder->data, builder->curr_used);
-    result.data[result.count] = 0;
-    return result;
-}
-
-string
-string_builder_to_string_nocopy(String_Builder* builder) {
-    string result;
-    result.data = builder->data;
-    result.count = builder->curr_used;
-    return result;
-}
 
 typedef struct Memory_Block_Header Memory_Block_Header;
 struct Memory_Block_Header {
@@ -372,24 +451,24 @@ struct Memory_Block_Header {
     Memory_Block_Header* next;
     
     // NOTE(Alexander): sizes included the header
-    size_t size;
-    size_t size_used;
+    umm size;
+    umm size_used;
 };
 
 typedef struct {
     char* base;
-    size_t size;
-    size_t curr_used;
-    size_t prev_used;
-    size_t min_block_size;
+    umm size;
+    umm curr_used;
+    umm prev_used;
+    umm min_block_size;
 } Memory_Arena;
 
 #define ARENA_DEFAULT_BLOCK_SIZE 10240; // 10 kB
 
 // NOTE(Alexander): align has to be a power of two.
-inline size_t
-align_forward(size_t address, size_t align) {
-    size_t modulo = address & (align - 1);
+inline umm
+align_forward(umm address, umm align) {
+    umm modulo = address & (align - 1);
     if (modulo != 0) {
         address += align - modulo;
     }
@@ -397,9 +476,9 @@ align_forward(size_t address, size_t align) {
 }
 
 void*
-arena_push_size(Memory_Arena* arena, size_t size, size_t align) {
-    size_t current = (size_t) (arena->base + arena->curr_used);
-    size_t offset = align_forward(current, align) - (size_t) arena->base;
+arena_push_size(Memory_Arena* arena, umm size, umm align) {
+    umm current = (umm) (arena->base + arena->curr_used);
+    umm offset = align_forward(current, align) - (umm) arena->base;
     
     if (offset + size > arena->size) {
         if (arena->min_block_size == 0) {
@@ -422,8 +501,8 @@ arena_push_size(Memory_Arena* arena, size_t size, size_t align) {
         arena->prev_used = arena->curr_used;
         arena->size = arena->min_block_size;
         
-        current = (size_t) arena->base + arena->curr_used;
-        offset = align_forward(current, align) - (size_t) arena->base;
+        current = (umm) arena->base + arena->curr_used;
+        offset = align_forward(current, align) - (umm) arena->base;
     }
     
     void* result = arena->base + offset;
@@ -445,8 +524,8 @@ arena_push_string(Memory_Arena* arena, string str) {
 }
 
 inline void
-arena_push_cstring(Memory_Arena* arena, const char* data) {
-    size_t count = strlen(data);
+arena_push_cstring(Memory_Arena* arena, cstring data) {
+    umm count = strlen(data);
     void* ptr = arena_push_size(arena, count, 1);
     memcpy(ptr, data, count);
 }
@@ -655,9 +734,13 @@ parse_markdown_list(Tokenizer* t, Memory_Arena* arena, Token line_start, int cur
     return result;
 }
 
-Dom_Node*
+// Forward declare
+Dom read_markdown_file_ex(cstring filename, Memory_Arena* arena);
+
+Dom_Sequence
 parse_markdown_line(Tokenizer* t, Memory_Arena* arena, Dom_Node* prev_node) {
-    Dom_Node* result = 0;
+    Dom_Sequence result;
+    zero_struct(result);
     
     Token token = next_token(t);
     for (;;) {
@@ -694,8 +777,39 @@ parse_markdown_line(Tokenizer* t, Memory_Arena* arena, Dom_Node* prev_node) {
         }
     }
     
-    
-    if (indent == 0 && token.symbol == '#' && peek_token(t).whitespace) {
+    if (indent == 0 && token.symbol == '@' && token.text.count == 1 && !peek_token(t).whitespace) {
+        token = next_token(t);
+        
+        // TODO(alexander): probably not how we should detect macro definitions
+        const string include_literal = string_lit("include");
+        
+        if (string_equals(token.text, include_literal) && peek_token(t).whitespace) {
+            next_token(t);
+            
+            if (next_token(t).symbol == '"' && peek_token(t).symbol != '"') {
+                token = next_token(t);
+                string filename = token.text;
+                filename.count = 0;
+                while (token.symbol != '"') {
+                    filename.count += token.text.count;
+                    token = next_token(t);
+                }
+                next_token(t);
+                
+                // TODO(Alexander): create a preprocessing later on
+                Dom included_dom = read_markdown_file_ex(string_to_cstring(filename), arena);
+                
+                result = included_dom.seq;
+                
+            } else {
+                assert(0 && "invalid macro #include declaration");
+            }
+        } else {
+            printf("Parsed unexpected macro: %.*s\n", (int) token.text.count, token.text.data);
+            assert(0 && "invalid macro");
+        }
+        
+    } else if (indent == 0 && token.symbol == '#' && peek_token(t).whitespace) {
         next_token(t);
         Token begin = next_token(t);
         Token end = begin;
@@ -706,26 +820,26 @@ parse_markdown_line(Tokenizer* t, Memory_Arena* arena, Dom_Node* prev_node) {
         Dom_Node* node = arena_push_struct(arena, Dom_Node);
         node->type = Dom_Heading;
         node->text.data = begin.text.data;
-        node->text.count = (size_t) (end.text.data - begin.text.data);
+        node->text.count = (umm) (end.text.data - begin.text.data);
         node->heading.level = (int) token.text.count;
-        result = node;
+        result.first = node;
         
     } else if (is_unordered_list_symbol(token.symbol) && peek_token(t).whitespace) {
         Dom_Node* node = arena_push_struct(arena, Dom_Node);
         node->type = Dom_Unordered_List;
         node->unordered_list.seq = parse_markdown_list(t, arena, token, indent);
-        result = node;
+        result.first = node;
         
     } else if (token.number >= 0 && peek_token(t).symbol == '.') {
         Dom_Node* node = arena_push_struct(arena, Dom_Node);
         node->type = Dom_Ordered_List;
         node->ordered_list.seq = parse_markdown_list(t, arena, token, indent);
-        result = node;
+        result.first = node;
         
     } else if (token.symbol == '`' && token.text.count == 3) {
         Dom_Node* node = arena_push_struct(arena, Dom_Node);
         node->type = Dom_Code_Block;
-        result = node;
+        result.first = node;
         
     } else if (token.symbol == '!' && peek_token(t).symbol == '[') {
         string alt = parse_enclosed_string(t, '[', ']');
@@ -736,28 +850,32 @@ parse_markdown_line(Tokenizer* t, Memory_Arena* arena, Dom_Node* prev_node) {
             node->type = Dom_Image;
             node->image.source = src;
             node->text = alt;
-            result = node;
+            result.first = node;
         }
     } else {
         if (!token.new_line && prev_node->type == Dom_Paragraph) {
             // Join the two sequence of nodes into single paragraph node
             Dom_Sequence next_seq = parse_markdown_text_line(t, arena, token);
-            result = prev_node;
-            result->paragraph.seq.last->next = next_seq.first;
-            result->paragraph.seq.last = next_seq.last;
+            result.first = prev_node;
+            result.first->paragraph.seq.last->next = next_seq.first;
+            result.first->paragraph.seq.last = next_seq.last;
         } else {
             Dom_Node* node = arena_push_struct(arena, Dom_Node);
             node->type = Dom_Paragraph;
             node->paragraph.seq = parse_markdown_text_line(t, arena, token);
-            result = node;
+            result.first = node;
         }
+    }
+    
+    if (result.last == 0) {
+        result.last = result.first;
     }
     
     return result;
 }
 
 Dom
-read_markdown_file(const char* filename) {
+read_markdown_file_ex(cstring filename, Memory_Arena* arena) {
     Dom result;
     zero_struct(result);
     
@@ -774,25 +892,32 @@ read_markdown_file(const char* filename) {
     t->curr = t->base;
     t->end = t->curr + source.count;
     
-    Memory_Arena dom_arena;
-    zero_struct(dom_arena);
+    Dom_Node* root = arena_push_struct(arena, Dom_Node);
+    root->type = Dom_Root;
+    result.seq.first = root;
+    Dom_Node* curr_node = root;
     
-    result.root = arena_push_struct(&dom_arena, Dom_Node);
-    Dom_Node* curr_node = result.root;
     while (true) {
-        Dom_Node* next_node = parse_markdown_line(t, &dom_arena, curr_node);
-        if (!next_node || next_node->type == Dom_None) {
+        Dom_Sequence nodes = parse_markdown_line(t, arena, curr_node);
+        if (!nodes.first || nodes.first->type == Dom_None) {
             break;
         }
         
-        if (next_node != curr_node) {
-            curr_node->next = next_node;
-            curr_node = next_node;
+        if (nodes.first != curr_node) {
+            curr_node->next = nodes.first;
+            curr_node = nodes.last;
         }
     }
-    
+    result.seq.last = curr_node;
     
     return result;
+}
+
+inline Dom
+read_markdown_file(cstring filename) {
+    Memory_Arena arena;
+    zero_struct(arena);
+    return read_markdown_file_ex(filename, &arena);
 }
 
 void
@@ -909,7 +1034,7 @@ convert_memory_arena_to_string(Memory_Arena* arena) {
         
         header = first_header;
         while (header) {
-            size_t size = header->size_used - sizeof(Memory_Block_Header);
+            umm size = header->size_used - sizeof(Memory_Block_Header);
             memcpy(dest, header + 1, size);
             dest += size;
             header = header->next;
@@ -926,7 +1051,7 @@ generate_html_from_dom(Dom* dom) {
     Memory_Arena html_buffer;
     zero_struct(html_buffer);
     
-    Dom_Node* node = dom->root;
+    Dom_Node* node = dom->seq.first;
     push_generated_html_from_dom_node(&html_buffer, node, 0);
     string result = convert_memory_arena_to_string(&html_buffer);
     return result;
@@ -954,13 +1079,13 @@ template_process_string(string source, int argc, string* args) {
         if (token.symbol == '$' && token.text.count == 1) {
             int arg_index = peek_token(t).number;
             if (arg_index >= 0 && arg_index < argc) {
-                string_builder_push(sb, args[arg_index]);
+                string_builder_push_string(sb, args[arg_index]);
                 next_token(t);
                 token = next_token(t);
             }
         }
         
-        string_builder_push(sb, token.text);
+        string_builder_push_string(sb, token.text);
         token = next_token(t);
     }
     

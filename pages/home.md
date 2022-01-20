@@ -17,7 +17,11 @@
 <div class="row">
   <div class="column" style="min-width: 320px;">
     ## At Work
-    ### Fullstack
+    ### Full stack
+    I currently work as a full stack developer which involes the entire tech stack.
+    Most of our codebase is not using any framework and is 
+
+    
   </div>
   
   <div class="column" style="min-width: 320px;">
@@ -42,6 +46,10 @@
   </div>
 </div>
 
-## What I Want to Learn In 2022
+@include "pages/2022.md"
+@include "pages/2022.md"
+@include "pages/2022.md"
+@include "pages/2022.md"
+@include "pages/2022.md"
+@include "pages/2022.md"
 
-TODO
