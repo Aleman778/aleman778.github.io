@@ -48,6 +48,7 @@ generate_page_from_markdown(string filename, string dest_filename) {
 
 int
 main(int argc, char* argv[]) {
+    CreateDirectoryA("generated", 0);
     
     global_template_params.template_path = string_lit("assets/base_template.html");
     global_template_params.stylesheet_path = string_lit("/assets/style.css");
@@ -55,7 +56,18 @@ main(int argc, char* argv[]) {
     
     generate_page_from_markdown(string_lit("pages/home.md"), 
                                 string_lit("generated/index.html"));
-    generate_page_from_markdown(string_lit("pages/project_sqrrl.md"), string_lit("generated/projects/index.html"));
+    
+    generate_page_from_markdown(string_lit("pages/project_sqrrl.md"), 
+                                string_lit("generated/projects/index.html"));
+    
+    generate_page_from_markdown(string_lit("pages/about.md"), 
+                                string_lit("generated/about/index.html"));
+    
+    generate_page_from_markdown(string_lit("pages/blog.md"), 
+                                string_lit("generated/blog/index.html"));
+    
+    generate_page_from_markdown(string_lit("pages/contact.md"), 
+                                string_lit("generated/contact/index.html"));
     //printf("Generated:\n%.*s\n", (int) html.count, html.data);
     
     
@@ -79,7 +91,9 @@ main(int argc, char* argv[]) {
         free(raw_css.data);
         free(result.data);
         
-        copy_file(string_lit("assets/script.js"), string_lit("generated/assets/script.js"));
-        copy_file(string_lit("assets/avatar.jpg"), string_lit("generated/assets/avatar.jpg"));
+        copy_file_c("assets/script.js", "generated/assets/script.js");
+        copy_file_c("assets/avatar.jpg", "generated/assets/avatar.jpg");
+        copy_file_c("assets/github.png", "generated/assets/github.png");
+        copy_file_c("assets/linkedin.png", "generated/assets/linkedin.png");
     }
 }

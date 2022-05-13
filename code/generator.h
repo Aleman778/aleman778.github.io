@@ -78,14 +78,14 @@ string_hash(string str) {
 string
 path_to_dir(string path) {
     umm index = path.count - 1;
-    for (; index > 0; index--) {
+    for (; index >= 0; index--) {
         char c = path.data[index];
         if (c == '\\' || c == '/') {
             break;
         }
     }
     
-    path.count = index - 1;
+    path.count = index;
     return path;
 }
 
@@ -228,6 +228,7 @@ write_entire_file(string filepath, string contents) {
 // TODO(Alexander): OS probably has a better option 
 bool
 copy_file(string src_filepath, string dst_filepath) {
+    
     string contents = read_entire_file(src_filepath);
     if (!contents.data) {
         return false;
@@ -235,6 +236,11 @@ copy_file(string src_filepath, string dst_filepath) {
     bool result = write_entire_file(dst_filepath, contents);
     free(contents.data);
     return result;
+}
+
+inline bool
+copy_file_c(cstring src_filepath, cstring dst_filepath) {
+    return copy_file(string_lit(src_filepath), string_lit(dst_filepath));
 }
 
 typedef struct {
