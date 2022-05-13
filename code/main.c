@@ -1,4 +1,5 @@
 #include "generator.h"
+#include <windows.h>
 
 typedef struct {
     string defaultBgColor;
@@ -16,19 +17,52 @@ typedef struct {
     string stylesheet_path;
     string script_path;
     string content;
+    string template_path;
 } Template_Parameters;
+
+Template_Parameters global_template_params;
+
+void 
+generate_page_from_markdown(string filename, string dest_filename) {
+    Template_Parameters params = global_template_params;
+    
+    string dest_dir = path_to_dir(dest_filename);
+    //int folder_depth = dir_get_folder_depth(dest_dir);
+    
+    //string leave_dir = "../";
+    //for (int i = 0; i < folder_depth; i++) {
+    //leave_dir
+    //}
+    
+    CreateDirectoryA(string_to_cstring(dest_dir), 0);
+    Dom dom = read_markdown_file(filename);
+    
+    params.content = generate_html_from_dom(&dom);
+    
+    string template_html = read_entire_file(params.template_path);
+    string result = template_process_string(template_html, 3, (string*) &params);
+    printf("Generated:\n%.*s\n", f_string(result));
+    write_entire_file(dest_filename, result);
+}
 
 
 int
 main(int argc, char* argv[]) {
-    char* filename = "pages/home.md";
-    Dom dom = read_markdown_file(filename);
-    string html = generate_html_from_dom(&dom);
+    
+    global_template_params.template_path = string_lit("assets/base_template.html");
+    global_template_params.stylesheet_path = string_lit("/assets/style.css");
+    global_template_params.script_path = string_lit("/assets/script.js");
+    
+    generate_page_from_markdown(string_lit("pages/home.md"), 
+                                string_lit("generated/index.html"));
+    generate_page_from_markdown(string_lit("pages/project_sqrrl.md"), string_lit("generated/projects/index.html"));
     //printf("Generated:\n%.*s\n", (int) html.count, html.data);
     
-    // NOTE(Alexander): copy over the assets to generated dir
+    
     {
-        string raw_css = read_entire_file("assets/style.css");
+        // NOTE(Alexander): proces and copy over the assets to generated/assets dir
+        CreateDirectoryA("generated/assets", 0);
+        string raw_css = read_entire_file(string_lit("assets/style.css"));
         
         Theme_Parameters theme;
         theme.defaultBgColor = string_lit("rgb(30, 31, 32)");
@@ -41,21 +75,11 @@ main(int argc, char* argv[]) {
         theme.darkFgColor = theme.defaultFgColor;
         
         string result = template_process_string(raw_css, 6, (string*) &theme);
-        write_entire_file("generated/assets/style.css", result);
+        write_entire_file(string_lit("generated/assets/style.css"), result);
         free(raw_css.data);
         free(result.data);
+        
+        copy_file(string_lit("assets/script.js"), string_lit("generated/assets/script.js"));
+        copy_file(string_lit("assets/avatar.jpg"), string_lit("generated/assets/avatar.jpg"));
     }
-    
-    copy_file("assets/script.js", "generated/assets/script.js");
-    copy_file("assets/avatar.jpg", "generated/assets/avatar.jpg");
-    
-    Template_Parameters params;
-    params.stylesheet_path = string_lit("assets/style.css");
-    params.script_path = string_lit("assets/script.js");
-    params.content = html;
-    
-    string template_html = read_entire_file("assets/base_template.html");
-    string result = template_process_string(template_html, 3, (string*) &params);
-    printf("Generated:\n%.*s\n", (int) result.count, result.data);
-    write_entire_file("generated/index.html", result);
 }

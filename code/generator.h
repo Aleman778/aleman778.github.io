@@ -42,6 +42,8 @@ typedef double       f64;
 typedef int32_t      b32;
 typedef const char*  cstring;
 
+#define f_string(s) (int) s.count, (char*) s.data
+
 typedef struct {
     char* data;
     size_t count;
@@ -71,6 +73,32 @@ string_hash(string str) {
         hash = (hash * 33) ^ (size_t) str.data[i];
     }
     return hash;
+}
+
+string
+path_to_dir(string path) {
+    umm index = path.count - 1;
+    for (; index > 0; index--) {
+        char c = path.data[index];
+        if (c == '\\' || c == '/') {
+            break;
+        }
+    }
+    
+    path.count = index - 1;
+    return path;
+}
+
+int
+dir_get_folder_depth(string dir) {
+    int result = 0;
+    for (int index = 0; index < dir.count; index++) {
+        char c = dir.data[index];
+        if (c == '\\' || c == '/') {
+            result++;
+        }
+    }
+    return result;
 }
 
 int
@@ -161,14 +189,14 @@ string_builder_to_string_nocopy(String_Builder* sb) {
 }
 
 string
-read_entire_file(cstring filepath) {
+read_entire_file(string filepath) {
     string result;
     zero_struct(result);
     
     FILE* file;
-    fopen_s(&file, filepath, "rb");
+    fopen_s(&file, string_to_cstring(filepath), "rb");
     if (!file) {
-        printf("File `%s` was not found!", filepath);
+        printf("File `%.*s` was not found!", f_string(filepath));
         return result;
     }
     
@@ -185,10 +213,10 @@ read_entire_file(cstring filepath) {
 }
 
 bool
-write_entire_file(cstring filepath, string contents) {
-    FILE* file = fopen(filepath, "wb+");
+write_entire_file(string filepath, string contents) {
+    FILE* file = fopen(string_to_cstring(filepath), "wb+");
     if (!file) {
-        printf("Failed to open `%s` for writing!\n", filepath);
+        printf("Failed to open `%.*s` for writing!\n", f_string(filepath));
         return false;
     }
     fwrite(contents.data, contents.count, 1, file);
@@ -199,7 +227,7 @@ write_entire_file(cstring filepath, string contents) {
 
 // TODO(Alexander): OS probably has a better option 
 bool
-copy_file(cstring src_filepath, cstring dst_filepath) {
+copy_file(string src_filepath, string dst_filepath) {
     string contents = read_entire_file(src_filepath);
     if (!contents.data) {
         return false;
@@ -735,7 +763,7 @@ parse_markdown_list(Tokenizer* t, Memory_Arena* arena, Token line_start, int cur
 }
 
 // Forward declare
-Dom read_markdown_file_ex(cstring filename, Memory_Arena* arena);
+Dom read_markdown_file_ex(string filename, Memory_Arena* arena);
 
 Dom_Sequence
 parse_markdown_line(Tokenizer* t, Memory_Arena* arena, Dom_Node* prev_node) {
@@ -797,7 +825,7 @@ parse_markdown_line(Tokenizer* t, Memory_Arena* arena, Dom_Node* prev_node) {
                 next_token(t);
                 
                 // TODO(Alexander): create a preprocessing later on
-                Dom included_dom = read_markdown_file_ex(string_to_cstring(filename), arena);
+                Dom included_dom = read_markdown_file_ex(filename, arena);
                 
                 result = included_dom.seq;
                 
@@ -875,7 +903,7 @@ parse_markdown_line(Tokenizer* t, Memory_Arena* arena, Dom_Node* prev_node) {
 }
 
 Dom
-read_markdown_file_ex(cstring filename, Memory_Arena* arena) {
+read_markdown_file_ex(string filename, Memory_Arena* arena) {
     Dom result;
     zero_struct(result);
     
@@ -914,7 +942,7 @@ read_markdown_file_ex(cstring filename, Memory_Arena* arena) {
 }
 
 inline Dom
-read_markdown_file(cstring filename) {
+read_markdown_file(string filename) {
     Memory_Arena arena;
     zero_struct(arena);
     return read_markdown_file_ex(filename, &arena);
