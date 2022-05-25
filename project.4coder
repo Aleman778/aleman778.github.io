@@ -34,7 +34,7 @@ commands = {
     .linux = "build/generate",
     .mac = "build/generate", },
   .serve = { .out = "*serve*", .footer_panel = false, .save_dirty_files = false,
-    .win = "python -m http.server",
+    .win = "dev_server.bat",
     .linux = "build/generate",
     .mac = "build/generate", }
 };

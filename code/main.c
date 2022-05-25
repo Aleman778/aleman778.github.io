@@ -41,7 +41,7 @@ generate_page_from_markdown(string filename, string dest_filename) {
     
     string template_html = read_entire_file(params.template_path);
     string result = template_process_string(template_html, 3, (string*) &params);
-    printf("Generated:\n%.*s\n", f_string(result));
+    //printf("Generated:\n%.*s\n", f_string(result));
     write_entire_file(dest_filename, result);
 }
 
