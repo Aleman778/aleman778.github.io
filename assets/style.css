@@ -1,6 +1,7 @@
 
 * {
     font-family: Helvetica;
+    box-sizing: border-box;
 }
 
 html {
@@ -50,10 +51,37 @@ body {
   color: $1;
 }
 
+.notification-container {
+    position: relative;
+    z-index: 200;
+}
+
+.notification {
+    padding: 6px;
+    width: 100%;
+}
+
+.notification.m-info {
+    background-color: rgb(35, 78, 107);
+    color: white;
+}
+
+.notification.m-warning {
+    background-color: rgb(94, 78, 32);
+    color: white;
+}
+
+.notification.m-error {
+    background-color: rgb(128, 11, 11);
+    color: white;
+}
+
 .nav {
+    position: relative;
     padding: 8px;
     background-color: $4;
     color: $5;
+    z-index: 100;
 }
 
 .nav-container {
@@ -112,6 +140,12 @@ body {
     color: $2;
 }
 
+
+.content-container {
+    position: relative;
+    z-index: 10;
+}
+
 .hero {
     font-size: 18px;
     background-color: $4;
@@ -138,4 +172,11 @@ body {
 
 .icon-social {
     padding: 6px 0;
+}
+
+.main-canvas {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    height: 100%;
 }

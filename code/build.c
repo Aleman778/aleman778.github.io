@@ -45,7 +45,6 @@ generate_page_from_markdown(string filename, string dest_filename) {
     write_entire_file(dest_filename, result);
 }
 
-
 int
 main(int argc, char* argv[]) {
     CreateDirectoryA("generated", 0);
@@ -91,7 +90,25 @@ main(int argc, char* argv[]) {
         free(raw_css.data);
         free(result.data);
         
-        copy_file_c("assets/script.js", "generated/assets/script.js");
+        {
+            // Build javascript bundle
+            String_Builder sb;
+            zero_struct(sb);
+#define include(filename) \
+string_builder_push_string(&sb, read_entire_file(string_lit(filename)));
+            
+            include("code/3dcanvas.js");
+            include("code/main.js");
+            
+#undef include
+            
+            // Write out the bundle
+            string bundle = string_builder_to_string_nocopy(&sb);
+            write_entire_file(string_lit("generated/assets/script.js"), bundle);
+            string_builder_free(&sb);
+        }
+        
+        
         copy_file_c("assets/avatar.jpg", "generated/assets/avatar.jpg");
         copy_file_c("assets/github.png", "generated/assets/github.png");
         copy_file_c("assets/linkedin.png", "generated/assets/linkedin.png");
