@@ -148,7 +148,7 @@ body {
 
 .hero {
     font-size: 18px;
-    background-color: $4;
+    background-color: rgb(20, 21, 22, 0.4);
     border-radius: 4px;
     padding: 32px;
     max-width: 480px;

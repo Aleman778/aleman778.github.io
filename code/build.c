@@ -97,7 +97,8 @@ main(int argc, char* argv[]) {
 #define include(filename) \
 string_builder_push_string(&sb, read_entire_file(string_lit(filename)));
             
-            include("code/3dcanvas.js");
+            include("code/canvas3d.js");
+            include("code/math.js");
             include("code/main.js");
             
 #undef include

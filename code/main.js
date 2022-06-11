@@ -11,7 +11,7 @@ function create_notification(html, modifier="m-info") {
 
 function main() {
     create_notification("WARNING: This page is currently under construction and is not done yet!", "m-warning")
-    create_3d_canvas();
+    canvas_3d_main();
 }
 
 
