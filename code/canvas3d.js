@@ -44,8 +44,6 @@ function create_3d_canvas() {
     }
 
     resize_viewport_to_fit_canvas(canvas);
-
-    generate_3d_terrain();
 }
 
 function compile_shaders(vertex_source, fragment_source) {
@@ -79,12 +77,18 @@ function compile_shaders(vertex_source, fragment_source) {
 
 function generate_3d_terrain() {
 
-    const width = 32*2;
-    const height = 32*2;
+    const width = 32*3;
+    const height = 32*3;
     const vertex_size = 3; // x, y, z
     var vertices = new Float32Array(width*height*vertex_size);
     var indices = new Uint16Array(width*height*6);
     var indices_lines = new Uint16Array(width*height*6);
+
+    const height_map = generate_terrain_height_map(width*2, height*2, width, height, 8, 0.33, 12.0, 1.0);
+    console.log(height_map);
+
+    const mesh_width = 8.0;
+    const mesh_height = 8.0;
 
     let ii = 0;
     for (let i = 0; i < width*height; i++) {
@@ -93,9 +97,9 @@ function generate_3d_terrain() {
 
         const vi = i*vertex_size;
 
-        vertices[vi + 0] = (x / (width - 1)) * 2 - 1.0;
-        vertices[vi + 1] = Math.random() * 0.05;
-        vertices[vi + 2] = (y / (height - 1)) * 2 - 1.0;//0.0;
+        vertices[vi + 0] = (x / (width - 1)) * mesh_width - mesh_width/2.0;
+        vertices[vi + 1] = height_map.data[i] * 0.1;
+        vertices[vi + 2] = (y / (height - 1)) * mesh_height - mesh_height/2.0;
 
         if (x < width - 1 && y < height - 1) {
             // Line indices
@@ -150,7 +154,7 @@ uniform mat4 mvp_matrix_2;
 
 void main() {
     gl_Position = mvp_matrix * mvp_matrix_2 * vec4(position, 1.0);
-    gl_PointSize = 6.0;
+    gl_PointSize = 4.0;
 }
 `;
 
@@ -191,7 +195,7 @@ function render_3d_terrain(scene, view_scroll) {
 
     // Intro animation 4s
     const animation_time = 4000; // ms
-    const distance = 0.3;
+    const distance = 0.2;
     const progress = elapsed_time / animation_time;
     let offset = distance - easeInOutCubic(progress)*distance;
     if (progress > 1.0) {

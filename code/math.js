@@ -4,7 +4,9 @@ function easeInOutCubic(t) {
     return t < 0.5 ? 4*t*t*t : (t - 1) * (2*t - 2) * (2*t - 2) + 1;
 }
 
-
+function lerp(t, a, b) {
+    return a + t * (b - a);
+}
 
 //
 // 3D vector
