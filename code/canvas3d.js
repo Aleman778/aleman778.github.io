@@ -173,11 +173,11 @@ void main() {
     };
 }
 
-let time = 0.0;
+function render_3d_terrain(scene, view_scroll) {
+    gl.clearColor(0.12, 0.13, 0.14, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
 
-function render_3d_terrain(scene) {
-    const view_scroll = document.scrollingElement.scrollTop / 500;
-    const sin_time = Math.sin(time);
+    const sin_time = Math.sin(elapsed_time);
 
     gl.useProgram(scene.program);
     const vw = viewport.width / 1000.0;
@@ -189,29 +189,26 @@ function render_3d_terrain(scene) {
     const look_at_dist = 1.0;
     const look_at_angle = Math.PI/2.0 + view_scroll;
 
-    const camera_pos = [0.0, -look_at_dist*Math.sin(look_at_angle), look_at_dist*Math.cos(look_at_angle)];
-    const camera_origin = [0.0, 0.0, 0.0];
-
-    // console.log(view_scroll);
-    const speed = 0.02;
-    const end_time = 4.0;
-
-    let offset = time*speed;
-    if (time > end_time) {
-        offset = end_time*speed;
+    // Intro animation 4s
+    const animation_time = 4000; // ms
+    const distance = 0.3;
+    const progress = elapsed_time / animation_time;
+    let offset = distance - easeInOutCubic(progress)*distance;
+    if (progress > 1.0) {
+        offset = 0;
     }
-    
-    const look_at = look_at_mat4(camera_pos, camera_origin, [0.0, 0.0, 0.05 + offset * (look_at_dist*Math.cos(look_at_angle) + 1.0)]);
-    const view_translate = translation_mat4(0.0,sin_time *4.0, 0.0);
+
+    const camera_height = look_at_dist*Math.cos(look_at_angle);
+    const camera_pos = [0.0, 0.0, 0.1 + camera_height];
+    const camera_origin = [0.0, look_at_dist*Math.sin(look_at_angle), 0.0];
+
+    const look_at = look_at_mat4(camera_pos, camera_origin, [
+        0.0, 0.0, 0.1 + offset]);
     const view_matrix = look_at;
 
     let mvp_matrix = proj_matrix;
-    // mul_mat4(view, view_matrix);
-    let mvp_2_matrix = mul_mat4(view_matrix, view_translate);
+    let mvp_2_matrix = view_matrix;
 
-    if (time < 0.01) {
-        console.log(mvp_matrix);
-    }
     gl.uniformMatrix4fv(scene.uniform_mvp_matrix, false, mvp_matrix);
     gl.uniformMatrix4fv(scene.uniform_mvp_matrix_2, false, view_matrix);
 
@@ -244,20 +241,32 @@ function render_3d_terrain(scene) {
     gl.disableVertexAttribArray(position_attrib_index);
     gl.disable(gl.CULL_FACE);
     gl.disable(gl.DEPTH_TEST);
+}
 
+function render_red_screen() {
+    gl.clearColor(1.0, 0.0, 0.0, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+}
 
-    time += 0.01; // TODO: should use delta time of animation loop
+function render_green_screen() {
+    gl.clearColor(0.0, 1.0, 0.0, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+}
+
+function render_blue_screen() {
+    gl.clearColor(0.0, 0.0, 1.0, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
 }
 
 let active_scene = null;
 
-function canvas_3d_render_loop() {
+function canvas_3d_render_loop(timestamp) {
     gl.clearColor(0.12, 0.13, 0.14, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
     requestNextFrame(canvas_3d_render_loop);
     if (active_scene != null) {
-        render_3d_terrain(active_scene);
+        parallaxEffect(timestamp, active_scene);
     }
 }
 
@@ -266,7 +275,7 @@ function canvas_3d_main() {
     create_3d_canvas();
     
     active_scene = generate_3d_terrain();
-    canvas_3d_render_loop();
+    requestNextFrame(canvas_3d_render_loop);
 }
 
 const requestNextFrame = (function() {

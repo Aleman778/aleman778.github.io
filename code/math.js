@@ -1,4 +1,11 @@
 
+
+function easeInOutCubic(t) {
+    return t < 0.5 ? 4*t*t*t : (t - 1) * (2*t - 2) * (2*t - 2) + 1;
+}
+
+
+
 //
 // 3D vector
 //
@@ -54,15 +61,7 @@ function look_at_mat4(from, to, pos = [0.0, 0.0, 0.0], tmp = [0.0, 0.0, 1.0]) {
     const tmp_norm = normalize_vec3(tmp);
     const f = normalize_vec3(sub_vec3(to, from));
     const r = cross_product_vec3(tmp_norm, f);
-
-
-    // const f = [ 0, 1.0017007269890779, 0.0023774305467727 ]
-    // const r = [ 1.0823774305467727, 0, 0 ]
-    console.log(f, r);
-    // f = vec3(0.0f, -1.0f, 0.0f);
-    // r = vec3(0.0f, 0.0f, 1.0f);
     const u = cross_product_vec3(f, r);
-
 
     return [
         r[0], r[1], r[2], 0,
