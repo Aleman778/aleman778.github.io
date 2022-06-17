@@ -44,6 +44,10 @@ function create_3d_canvas() {
     }
 
     resize_viewport_to_fit_canvas(canvas);
+
+
+    gl.clearColor(0.12, 0.13, 0.14, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
 }
 
 function compile_shaders(vertex_source, fragment_source) {
@@ -149,29 +153,49 @@ precision highp float;
 
 attribute vec3 position;
 
-uniform mat4 mvp_matrix;
-uniform mat4 mvp_matrix_2;
+uniform mat4 projection_mat;
+uniform mat4 world_view_mat;
+
+varying vec3 frag_pos;
 
 void main() {
-    gl_Position = mvp_matrix * mvp_matrix_2 * vec4(position, 1.0);
+    frag_pos = position;
+    gl_Position = projection_mat * world_view_mat * vec4(frag_pos, 1.0);
     gl_PointSize = 4.0;
 }
 `;
 
     const fragment_source = `
 #version 100
+
+precision highp float;
+
+uniform float fog_density;
+uniform float fog_gradient;
+
+varying vec3 frag_pos;
+
 void main() {
-  gl_FragColor = vec4(0.18, 0.54, 0.34, 1.0);
+  vec4 color = vec4(0.18, 0.54, 0.34, 1.0);
+  vec4 fog_color = vec4(0.12, 0.13, 0.14, 1.0);
+
+  float dist = length(frag_pos);
+  float fog_amount = exp(-pow(dist * fog_density, fog_gradient));
+  gl_FragColor = mix(fog_color, color, fog_amount);
 }
 `;
 
     const program = compile_shaders(vertex_source, fragment_source);
     gl.useProgram(program);
-    const uniform_mvp_matrix = gl.getUniformLocation(program, 'mvp_matrix');
-    const uniform_mvp_matrix_2 = gl.getUniformLocation(program, 'mvp_matrix_2');
+    const uniform_projection_mat = gl.getUniformLocation(program, 'projection_mat');
+    const uniform_world_view_mat = gl.getUniformLocation(program, 'world_view_mat');
+
+    const uniform_fog_density = gl.getUniformLocation(program, 'fog_density');
+    const uniform_fog_gradient = gl.getUniformLocation(program, 'fog_gradient');
 
     return {
-        vbo, ibo_lines, ibo, program, uniform_mvp_matrix, uniform_mvp_matrix_2,
+        vbo, ibo_lines, ibo, program, uniform_projection_mat, uniform_world_view_mat,
+        uniform_fog_density, uniform_fog_gradient,
         vertex_count: vertices.length / 3,
         index_count: indices.length,
     };
@@ -196,11 +220,18 @@ function render_3d_terrain(scene, view_scroll) {
     // Intro animation 4s
     const animation_time = 4000; // ms
     const distance = 0.2;
-    const progress = elapsed_time / animation_time;
+    let progress = elapsed_time / animation_time;
     let offset = distance - easeInOutCubic(progress)*distance;
     if (progress > 1.0) {
         offset = 0;
+        progress = 1.0;
     }
+
+    // Fog
+    const fog_density = 2.0 - progress*1.7;
+    const fog_gradient = 4.0;
+    gl.uniform1f(scene.uniform_fog_density, fog_density);
+    gl.uniform1f(scene.uniform_fog_gradient, fog_gradient);
 
     const camera_height = look_at_dist*Math.cos(look_at_angle);
     const camera_pos = [0.0, 0.0, 0.1 + camera_height];
@@ -210,11 +241,11 @@ function render_3d_terrain(scene, view_scroll) {
         0.0, 0.0, 0.1 + offset]);
     const view_matrix = look_at;
 
-    let mvp_matrix = proj_matrix;
-    let mvp_2_matrix = view_matrix;
+    let projection_mat = proj_matrix;
+    let world_view_mat = view_matrix;
 
-    gl.uniformMatrix4fv(scene.uniform_mvp_matrix, false, mvp_matrix);
-    gl.uniformMatrix4fv(scene.uniform_mvp_matrix_2, false, view_matrix);
+    gl.uniformMatrix4fv(scene.uniform_projection_mat, false, projection_mat);
+    gl.uniformMatrix4fv(scene.uniform_world_view_mat, false, world_view_mat);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, scene.vbo);
     
