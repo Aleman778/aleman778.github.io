@@ -12,6 +12,10 @@ function lerp(t, a, b) {
 // 3D vector
 //
 
+function vec3(x, y, z, w) {
+    return [x, y, z, w];
+}
+
 function sub_vec3(a, b) {
     return [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
 }
@@ -27,6 +31,14 @@ function cross_product_vec3(a, b) {
         a[2] * b[0] - a[0] * b[2],
         a[0] * b[1] - a[1] * b[0],
     ];
+}
+
+//
+// 4D vector
+//
+
+function vec4(x, y, z, w) {
+    return [x, y, z, w];
 }
 
 //
@@ -123,5 +135,20 @@ function mul_mat4(a, b) {
     result[11] = a20 * b0 + a21 * b1 + a22 * b2 + a23 * b3;
     result[15] = a30 * b0 + a31 * b1 + a32 * b2 + a33 * b3;
 
+    return result;
+}
+
+function mul_mat4_vec4(a, b) {
+    let result = [];
+    let a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3];
+    let a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7];
+    let a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11];
+    let a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15];
+
+    let b0 = b[0], b1 = b[1], b2 = b[2], b3 = b[3];
+    result[0]  = a00 * b0 + a01 * b1 + a02 * b2 + a03 * b3;
+    result[1]  = a10 * b0 + a11 * b1 + a12 * b2 + a13 * b3;
+    result[2]  = a20 * b0 + a21 * b1 + a22 * b2 + a23 * b3;
+    result[3] = a30 * b0 + a31 * b1 + a32 * b2 + a33 * b3;
     return result;
 }

@@ -112,7 +112,7 @@ function generate_terrain_height_map(width,
     terrain.scale_x = detail_x / width;
     terrain.scale_y = detail_y / height;
     terrain.width = detail_x;
-    terrain.height = detail_x*detail_y;
+    terrain.height = detail_y;
     terrain.data = [];
     
     for (let i = 0; i < detail_x * detail_y; i++) {
@@ -126,8 +126,8 @@ function generate_terrain_height_map(width,
 }
 
 function sample_point_at(map, x, y) {
-    const x0 = Math.floor(x*map.scale_x);
-    const y0 = Math.floor(y*map.scale_y);
+    let x0 = Math.floor(x*map.scale_x);
+    let y0 = Math.floor(y*map.scale_y);
 
     if (x0 < 0) x0 = 0; if (x0 > map.width - 1)  x0 = map.width  - 1;
     if (y0 < 0) y0 = 0; if (y0 > map.height - 1) y0 = map.height - 1;
@@ -142,7 +142,7 @@ function sample_point_at(map, x, y) {
     const h2 = map.data[x1+y0*map.width];
     const h3 = map.data[x0+y1*map.width];
     const h4 = map.data[x1+y1*map.width];
-    
+
     const u = x*map.scale_x - x0;
     const v = y*map.scale_y - y0;
     const hx0 = lerp(u, h1, h2);

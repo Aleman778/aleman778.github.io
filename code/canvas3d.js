@@ -89,8 +89,7 @@ function generate_3d_terrain() {
     var indices_lines = new Uint16Array(width*height*6);
 
     const height_map = generate_terrain_height_map(width*2, height*2, width, height, 8, 0.33, 12.0, 1.0);
-    console.log(height_map);
-
+    
     const mesh_width = 8.0;
     const mesh_height = 8.0;
 
@@ -198,6 +197,7 @@ void main() {
         uniform_fog_density, uniform_fog_gradient,
         vertex_count: vertices.length / 3,
         index_count: indices.length,
+        height_map,
     };
 }
 
@@ -205,20 +205,10 @@ function render_3d_terrain(scene, view_scroll) {
     gl.clearColor(0.12, 0.13, 0.14, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    const sin_time = Math.sin(elapsed_time);
-
     gl.useProgram(scene.program);
-    const vw = viewport.width / 1000.0;
-    const vh = viewport.height / 1000.0;
-    
-    const proj_matrix = perspective_mat4(-100.0, 1000.0, -vw, vw, -vh, vh);
-    gl.uniformMatrix4fv(scene.uniform_projection, false, proj_matrix);
-
-    const look_at_dist = 1.0;
-    const look_at_angle = Math.PI/2.0 + view_scroll;
 
     // Intro animation 4s
-    const animation_time = 4000; // ms
+    const animation_time = 4000;
     const distance = 0.2;
     let progress = elapsed_time / animation_time;
     let offset = distance - easeInOutCubic(progress)*distance;
@@ -233,16 +223,44 @@ function render_3d_terrain(scene, view_scroll) {
     gl.uniform1f(scene.uniform_fog_density, fog_density);
     gl.uniform1f(scene.uniform_fog_gradient, fog_gradient);
 
-    const camera_height = look_at_dist*Math.cos(look_at_angle);
-    const camera_pos = [0.0, 0.0, 0.1 + camera_height];
-    const camera_origin = [0.0, look_at_dist*Math.sin(look_at_angle), 0.0];
+    // Camera control
+    const vw = viewport.width / 1000.0;
+    const vh = viewport.height / 1000.0;
+    const proj_matrix = perspective_mat4(-100.0, 1000.0, -vw, vw, -vh, vh);
+    gl.uniformMatrix4fv(scene.uniform_projection, false, proj_matrix);
 
-    const look_at = look_at_mat4(camera_pos, camera_origin, [
-        0.0, 0.0, 0.1 + offset]);
+    const look_at_dist = 1.0;
+    const look_at_angle = Math.PI/2.0 + view_scroll;
+
+    const camera_height = look_at_dist*Math.cos(look_at_angle);
+    const camera_from = [0.0, 0.0, 0.1 + camera_height];
+    const camera_to = [0.0, look_at_dist*Math.sin(look_at_angle), 0.0];
+    const camera_pos = [0.0, view_scroll*2.0, 0.1 + offset + view_scroll];
+
+    // const moving_away_scroll = Math.max(0.0, view_scroll - 0.6);
+
+    const look_at = look_at_mat4(camera_from, camera_to, camera_pos);
     const view_matrix = look_at;
 
     let projection_mat = proj_matrix;
     let world_view_mat = view_matrix;
+
+    // let sample_point = mul_mat4_vec4(world_view_mat, vec4(0.0, 0.0, 0.0, 1.0));
+
+    const sample_point = [
+        camera_pos[0]*scene.height_map.width + scene.height_map.width/2,
+        camera_pos[1]*scene.height_map.height + scene.height_map.height/2,
+        camera_pos[2]*6.0
+    ]
+    console.log(camera_pos[2]);
+    
+    // console.log();
+    const point = sample_point_at(scene.height_map, sample_point[0], sample_point[1]);
+    // console.log(point);
+    if (point < sample_point[2]) {
+        console.log('we are underneath the stage');
+    }
+    
 
     gl.uniformMatrix4fv(scene.uniform_projection_mat, false, projection_mat);
     gl.uniformMatrix4fv(scene.uniform_world_view_mat, false, world_view_mat);
@@ -253,6 +271,8 @@ function render_3d_terrain(scene, view_scroll) {
     gl.enableVertexAttribArray(position_attrib_index);
     gl.vertexAttribPointer(position_attrib_index, 3, gl.FLOAT, false, 0, 0);
 
+    gl.enable(gl.CULL_FACE);
+    gl.cullFace(gl.BACK);
 
     // Draw depth buffer pass
     gl.enable(gl.DEPTH_TEST);
@@ -261,8 +281,6 @@ function render_3d_terrain(scene, view_scroll) {
     gl.drawElements(gl.TRIANGLES, scene.index_count, gl.UNSIGNED_SHORT, 0);
     gl.colorMask(true, true, true, true);
 
-    gl.enable(gl.CULL_FACE);
-    gl.cullFace(gl.FRONT_AND_BACK);
     gl.depthFunc(gl.LEQUAL);
 
     // Draw points
